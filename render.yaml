@@ -1,0 +1,36 @@
+# Deploy this Blueprint from the connected iamsreecharan/roomie repository.
+# Starter + the persistent disk are paid resources; review Render's quote first.
+services:
+  - type: web
+    name: roomverse
+    runtime: node
+    plan: starter
+    repo: https://github.com/iamsreecharan/roomie
+    branch: main
+    numInstances: 1
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    disk:
+      name: roomverse-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: NODE_ENV
+        value: production
+      - key: ALLOW_DEMO
+        value: "false"
+      - key: DB_PATH
+        value: /var/data/roomverse.sqlite
+      - key: MEDIA_DIR
+        value: /var/data/media
+      - key: ROOMIE_MODEL
+        value: gpt-4.1-mini
+      - key: ROOMIE_API_URL
+        value: https://api.openai.com/v1/chat/completions
+      - key: ROOMIE_API_KEY
+        sync: false
+# Enter your OpenAI key when Render prompts. Add Google OAuth or TURN values in Render's Environment tab.
+# Optional Google and TURN credentials are omitted from the initial deployment.

@@ -1,0 +1,428 @@
+.rv-media-call {
+  border: 1px solid #e6ded4;
+  border-radius: 22px;
+  background: #fffcf7;
+  overflow: hidden;
+  color: #3a3a32;
+  margin-top: 24px;
+}
+.rv-media-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 21px 23px;
+  border-bottom: 1px solid #ebe3d9;
+}
+.rv-media-heading-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  background: #f4e9df;
+  color: #a55d45;
+  border-radius: 13px;
+  flex-shrink: 0;
+}
+.rv-media-heading h3 {
+  font-size: 15px;
+  margin: 0 0 4px;
+  font-weight: 650;
+}
+.rv-media-heading p {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+  color: #858174;
+}
+.rv-media-status {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #e8dfd3;
+  background: #faf6ef;
+  padding: 7px 10px;
+  border-radius: 99px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  color: #8a8376;
+}
+.rv-media-status i {
+  width: 6px;
+  height: 6px;
+  background: #b6afa3;
+  border-radius: 50%;
+}
+.rv-media-status.is-live {
+  color: #52705c;
+  background: #edf3e9;
+  border-color: #d9e5d2;
+}
+.rv-media-status.is-live i {
+  background: #6c9877;
+}
+.rv-media-intro {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 24px;
+}
+.rv-media-intro-copy {
+  flex: 1;
+}
+.rv-media-intro-copy p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #807b70;
+  margin: 8px 0 0;
+  max-width: 420px;
+}
+.rv-media-mini-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: #776d5f;
+}
+.rv-media-start-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.rv-media-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border-radius: 11px;
+  border: 1px solid #e2d9cd;
+  background: #fffdf9;
+  color: #675d4f;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  min-height: 39px;
+}
+.rv-media-button:hover {
+  background: #f2eadf;
+}
+.rv-media-button:focus-visible,
+.rv-media-playback button:focus-visible {
+  outline: 3px solid #9cbaa5;
+  outline-offset: 3px;
+}
+.rv-media-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.rv-media-button.is-primary {
+  background: #bf7359;
+  border-color: #bf7359;
+  color: white;
+}
+.rv-media-button.is-primary:hover {
+  background: #a96048;
+}
+.rv-media-button.is-selected {
+  background: #edf2e8;
+  border-color: #cfdcc5;
+  color: #4e6a51;
+}
+.rv-media-button.is-muted {
+  background: #f7e7de;
+  color: #a76750;
+  border-color: #eed4c7;
+}
+.rv-media-button.is-end {
+  background: #f9e7e0;
+  border-color: #efcbc0;
+  color: #a6503d;
+  margin-left: auto;
+}
+.rv-media-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #9b6348;
+  background: #fff1e4;
+  border-bottom: 1px solid #f0e0ce;
+  padding: 12px 23px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.rv-media-notice svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.rv-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  padding: 18px 20px;
+}
+.rv-media-tile {
+  height: 180px;
+  border-radius: 16px;
+  background: #e6e6da;
+  position: relative;
+  overflow: hidden;
+}
+.rv-media-tile video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #363b35;
+}
+.rv-media-tile.is-local:not([data-screen]) video {
+  transform: scaleX(-1);
+}
+.rv-media-tile.is-local:has(.rv-media-tile-label span:first-child) {
+  background: #e9e4d9;
+}
+.rv-media-person {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.rv-media-person > span {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: #fffcf0c9;
+  border-radius: 99px;
+  color: #716c59;
+}
+.rv-media-person .avatar {
+  filter: drop-shadow(0 8px 9px #65634c19);
+}
+.rv-media-tile-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 10px 12px;
+  background: linear-gradient(transparent, #373a31c9);
+  color: white;
+  font-size: 11px;
+}
+.rv-media-tile-label > span:first-child {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rv-media-tile-label > span:last-child {
+  font-size: 9px;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.rv-media-waiting {
+  min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 16px;
+  border: 1px dashed #ded4c5;
+  border-radius: 16px;
+  background: #fbf7ef;
+}
+.rv-media-waiting-rings {
+  width: 42px;
+  height: 42px;
+  background: #f2e9db;
+  color: #ad8762;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  margin-bottom: 11px;
+}
+.rv-media-waiting strong {
+  font-size: 12px;
+  font-weight: 550;
+}
+.rv-media-waiting p {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #928678;
+  max-width: 220px;
+  margin: 6px 0 0;
+}
+.rv-media-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 16px 22px;
+  border-top: 1px solid #ebe3d9;
+  align-items: center;
+}
+.rv-media-stage {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: #262d2b;
+  margin: 18px 20px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+.rv-media-stage video {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+}
+.rv-media-stage-placeholder {
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  color: #e7ddce;
+  padding: 28px;
+  background:
+    radial-gradient(ellipse at 25% 10%, #6b70624d, transparent 65%),
+    radial-gradient(ellipse at 95% 85%, #95624f55, transparent 60%), #2e3832;
+}
+.rv-media-stage-placeholder > svg {
+  color: #cda280;
+  margin-bottom: 17px;
+}
+.rv-media-stage-placeholder h4 {
+  font-family: Georgia, serif;
+  font-size: 23px;
+  font-weight: 400;
+  margin: 0 0 10px;
+}
+.rv-media-stage-placeholder p {
+  color: #b8b8a8;
+  font-size: 12px;
+  line-height: 1.7;
+  max-width: 320px;
+  margin: 0;
+}
+.rv-media-stage-label {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 16px 18px;
+  color: #f4ede1;
+  font-size: 11px;
+  background: linear-gradient(transparent, #18221ac7);
+}
+.rv-media-stage-label span:first-child {
+  font-weight: 600;
+}
+.rv-media-stage-label span:last-child {
+  color: #dad8c7;
+}
+.rv-media-playback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  background: #edf2e7;
+  color: #5d7456;
+  font-size: 11px;
+}
+.rv-media-playback button {
+  border: 0;
+  background: none;
+  text-decoration: underline;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  margin-left: auto;
+}
+.rv-media-call audio {
+  display: none;
+}
+@media (max-width: 760px) {
+  .rv-media-heading {
+    padding: 18px 16px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .rv-media-heading > div:nth-child(2) {
+    flex: 1;
+  }
+  .rv-media-status {
+    margin-left: 50px;
+    margin-top: -2px;
+  }
+  .rv-media-intro {
+    padding: 20px 16px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+  }
+  .rv-media-grid {
+    padding: 14px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+  .rv-media-tile {
+    height: 165px;
+  }
+  .rv-media-controls {
+    padding: 14px;
+    gap: 7px;
+  }
+  .rv-media-button {
+    padding: 10px 11px;
+    font-size: 10px;
+    flex: 0 1 auto;
+  }
+  .rv-media-button.is-end {
+    margin-left: 0;
+  }
+  .rv-media-stage {
+    margin: 14px;
+    aspect-ratio: 4/3;
+  }
+  .rv-media-stage-placeholder h4 {
+    font-size: 19px;
+  }
+  .rv-media-stage-placeholder p {
+    font-size: 11px;
+  }
+  .rv-media-notice {
+    padding: 12px 16px;
+  }
+  .rv-media-waiting {
+    padding: 12px;
+    min-height: 165px;
+  }
+  .rv-media-waiting p {
+    font-size: 10px;
+  }
+  .rv-media-playback {
+    padding: 12px 15px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rv-media-button {
+    transition: none;
+  }
+}
