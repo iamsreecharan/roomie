@@ -1,0 +1,69 @@
+.join-notifications {
+  display: grid;
+  gap: 8px;
+  padding: 12px 28px 0;
+}
+.join-notification {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #bdd5c6;
+  border-radius: 18px;
+  background: #edf6ef;
+  box-shadow: 0 4px 16px #24493908;
+}
+.join-notification-copy {
+  display: grid;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+.join-notification-copy strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.join-notification-copy span {
+  font-size: 12px;
+  color: #536b60;
+}
+.join-notification .button {
+  flex-shrink: 0;
+}
+.join-prompt-content {
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 20px 12px 12px;
+  text-align: center;
+}
+.join-prompt-content h3 {
+  margin: 0;
+  font-size: 22px;
+  overflow-wrap: anywhere;
+}
+.join-prompt-content p {
+  margin: 0 0 8px;
+  color: var(--text-muted, #647168);
+  line-height: 1.6;
+  max-width: 320px;
+}
+.join-prompt-content .button {
+  width: 100%;
+}
+@media (max-width: 600px) {
+  .join-notifications {
+    padding: 10px 12px 0;
+  }
+  .join-notification {
+    gap: 10px;
+    padding: 12px;
+    flex-wrap: wrap;
+  }
+  .join-notification-copy {
+    flex-basis: calc(100% - 54px);
+  }
+  .join-notification .button {
+    width: 100%;
+  }
+}

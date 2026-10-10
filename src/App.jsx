@@ -36,6 +36,7 @@ import {
   SafetyPage,
 } from "./pages/Social.jsx";
 import { VisitsPage } from "./pages/Visits.jsx";
+import JoinPrompt from "./components/JoinPrompt.jsx";
 import { PageBoundary } from "./components/ErrorBoundary.jsx";
 import { AdminPage } from "./pages/Creators.jsx";
 
@@ -990,6 +991,13 @@ export default function App() {
             </button>
           </div>
         </header>
+        <JoinPrompt
+          key={data.user.id}
+          data={data}
+          act={act}
+          navigate={navigate}
+          toast={toast}
+        />
         {!online && (
           <div className="connection-banner">
             You’re offline. Reconnect to save changes.

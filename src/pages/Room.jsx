@@ -600,9 +600,17 @@ function OwnerRoomPage({ data, act, navigate, toast }) {
           )}
           <div className="room-editor-bottom">
             <span>Save changes to update your room.</span>
+            <Button
+              variant="ghost"
+              className="room-mobile-cancel"
+              onClick={() => setEditing(false)}
+              disabled={busy}
+            >
+              Cancel
+            </Button>
             <Button onClick={save} disabled={busy}>
               <Check size={15} />
-              Save changes
+              {busy ? "Saving…" : "Save changes"}
             </Button>
           </div>
         </section>

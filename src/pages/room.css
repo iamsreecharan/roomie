@@ -3014,3 +3014,37 @@
   font-size: 12px;
   color: #7c6b72;
 }
+
+/* Editing actions stay within thumb reach, above the mobile navigation. */
+.room-mobile-cancel {
+  display: none;
+}
+@media (max-width: 760px) {
+  .room-page-simple:has(.room-editor) {
+    padding-bottom: 88px;
+  }
+  .room-page-simple .room-editor-bottom {
+    position: fixed;
+    bottom: calc(80px + env(safe-area-inset-bottom));
+    left: 12px;
+    right: 12px;
+    z-index: 46;
+    margin: 0;
+    padding: 10px;
+    background: #fffef9;
+    border: 1px solid #dfe4d7;
+    border-radius: 18px;
+    box-shadow: 0 6px 28px #263b2926;
+  }
+  .room-page-simple .room-editor-bottom > span {
+    display: none;
+  }
+  .room-page-simple .room-editor-bottom .button {
+    flex: 1;
+    min-height: 44px;
+    font-size: 13px;
+  }
+  .room-page-simple .room-mobile-cancel {
+    display: inline-flex;
+  }
+}

@@ -10,7 +10,7 @@ The user's latest instructions replace the original PDF scope for this iteration
 | Avatars                  | Original shaded 2.5D illustrations with appearance, hair, outfit, accessory and expression options; participant avatars appear in shared rooms.                                                                             |
 | Friendship               | Send, cancel, accept, reject, or remove a friendship. Basic profiles show mutual friends. Following from older versions never silently becomes friendship.                                                                  |
 | Knock permission         | Requesters can ask for knock access; recipients independently decide whether to grant it when accepting. Permission can be changed later. Only authorized friends can knock, with an optional message up to 160 characters. |
-| Invites                  | Hosts invite friends with username suggestions. Pending invitations never grant content access. Guests explicitly choose to join an accepted invitation or knock.                                                           |
+| Invites                  | Hosts invite friends with username suggestions. Pending invitations never grant content access. Guests explicitly choose to join an accepted invitation or knock through a global popup or persistent top Join button. Dismissing the popup preserves the shortcut.                                                           |
 | Shared room              | One host and up to four guests. Host controls admission and removal. Desktop room/chat sit together; mobile chat covers the room and closes to reveal host controls and private-object requests.                            |
 | Photos and private tools | Memories/photos, journal, tasks, calendar and whiteboard are private. Admitted guests request access to a specific object; the host approves or rejects it. Friendship alone gives no content access.                       |
 | Revocation               | Removing a guest, leaving, ending a visit, blocking or removing a friendship revokes access. Private media routes enforce the same authorization as resource content.                                                       |
@@ -27,3 +27,5 @@ The single-process deployment targets an initial 20–50-account pilot. Each gat
 Google sign-in and OpenAI provider requests need configured credentials and separate live checks. No credentials are included in Git. Email verification/password reset, push notifications, automated moderation, multi-instance infrastructure, payments, and a full 3D renderer remain future work.
 
 See [VALIDATION.md](VALIDATION.md) for current test evidence and [RENDER.md](RENDER.md) for production settings.
+
+Mobile furniture editing keeps Save and Cancel visible above the bottom navigation, without scrolling away from the room.

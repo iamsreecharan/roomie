@@ -66,6 +66,42 @@ try {
   const host = await account("Host");
   const guest = await account("Guest", 390);
   const third = await account("Third", 390);
+  await guest.page
+    .getByRole("button", { name: "Manual controls", exact: true })
+    .click();
+  const bed = guest.page.locator(".room-scene .room-object").first();
+  await bed.scrollIntoViewIfNeeded();
+  const bedBox = await bed.boundingBox();
+  await guest.page.mouse.move(
+    bedBox.x + bedBox.width / 2,
+    bedBox.y + bedBox.height / 2,
+  );
+  await guest.page.mouse.down();
+  await guest.page.mouse.move(
+    bedBox.x + bedBox.width / 2 + 25,
+    bedBox.y + bedBox.height / 2 + 15,
+    { steps: 5 },
+  );
+  await guest.page.mouse.up();
+  const saveRoom = guest.page.getByRole("button", {
+    name: "Save changes",
+    exact: true,
+  });
+  const saveBox = await saveRoom.boundingBox();
+  assert.ok(
+    saveBox.y >= 0 && saveBox.y + saveBox.height < 844 - 72,
+    "Furniture save must be visible above mobile navigation without scrolling",
+  );
+  await saveRoom.click();
+  await guest.page.locator(".room-editor").waitFor({ state: "hidden" });
+  const savedRoom = (
+    await (await guest.context.request.get(`${base}/api/bootstrap`)).json()
+  ).room;
+  assert.notEqual(
+    savedRoom.objects[0].x,
+    guest.bootstrap.room.objects[0].x,
+    "Dragged position must be persisted",
+  );
   assert.deepEqual(
     host.bootstrap.room.objects.map((object) => object.type),
     ["bed"],
@@ -179,9 +215,28 @@ try {
     .filter({ hasText: "Can I come over?" })
     .getByRole("button", { name: "Accept", exact: true })
     .click();
-  await route(guest, "visits");
-  await guest.page.getByRole("button", { name: /Ready to join/ }).click();
-  await guest.page
+  const joinPrompt = guest.page.getByRole("dialog", {
+    name: "Your knock was accepted",
+  });
+  await joinPrompt.waitFor();
+  assert.ok(
+    guest.page.url().includes("#/profile/"),
+    "Acceptance should reach the guest without navigating away",
+  );
+  await joinPrompt
+    .getByRole("button", { name: "Not now", exact: true })
+    .click();
+  await guest.page.reload();
+  const joinBanner = guest.page.getByRole("region", {
+    name: "Rooms ready to join",
+  });
+  await joinBanner.waitFor();
+  assert.equal(
+    await joinPrompt.count(),
+    0,
+    "Dismissed prompts should not reopen after refresh",
+  );
+  await joinBanner
     .getByRole("button", { name: "Join room", exact: true })
     .click();
   console.log("Knock accepted + joined");
@@ -275,6 +330,7 @@ try {
     .getByRole("button", { name: "Accept", exact: true })
     .click();
   await third.page
+    .getByRole("dialog", { name: "You're invited in" })
     .getByRole("button", { name: "Join room", exact: true })
     .click();
   await third.page.getByLabel("Close chat").click();
