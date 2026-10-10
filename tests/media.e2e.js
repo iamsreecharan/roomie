@@ -143,8 +143,24 @@ async function callStats(page) {
 try {
   const host = await account("host");
   const guest = await account("guest");
-  await act(guest, "knock.create", {
+  await act(guest, "friend.request", {
     userId: host.id,
+    requestKnockAccess: true,
+    grantKnockAccess: false,
+  });
+  const friendship = (await api(host, "/api/bootstrap")).requests.find(
+    (item) =>
+      item.type === "friend" &&
+      item.fromId === guest.id &&
+      item.status === "pending",
+  );
+  await act(host, "friend.respond", {
+    requestId: friendship.id,
+    accept: true,
+    grantKnockAccess: true,
+  });
+  await act(guest, "knock.create", {
+    hostId: host.id,
     reason: "Create together?",
   });
   const request = (await api(host, "/api/bootstrap")).requests.find(
@@ -316,34 +332,30 @@ try {
     const diagnostics = await accounts[index].page
       ?.evaluate(() => ({
         capture: window.__roomverseTestStreams?.map((stream) =>
-          stream
-            .getTracks()
-            .map((track) => ({
-              kind: track.kind,
-              state: track.readyState,
-              muted: track.muted,
-            })),
+          stream.getTracks().map((track) => ({
+            kind: track.kind,
+            state: track.readyState,
+            muted: track.muted,
+          })),
         ),
         peers: window.__roomverseTestPeers?.map((peer) => ({
           connection: peer.connectionState,
           signaling: peer.signalingState,
           ice: peer.iceConnectionState,
-          transceivers: peer
-            .getTransceivers()
-            .map((transceiver) => ({
-              direction: transceiver.direction,
-              currentDirection: transceiver.currentDirection,
-              sender: transceiver.sender.track && {
-                kind: transceiver.sender.track.kind,
-                readyState: transceiver.sender.track.readyState,
-                enabled: transceiver.sender.track.enabled,
-              },
-              receiver: transceiver.receiver.track && {
-                kind: transceiver.receiver.track.kind,
-                readyState: transceiver.receiver.track.readyState,
-                muted: transceiver.receiver.track.muted,
-              },
-            })),
+          transceivers: peer.getTransceivers().map((transceiver) => ({
+            direction: transceiver.direction,
+            currentDirection: transceiver.currentDirection,
+            sender: transceiver.sender.track && {
+              kind: transceiver.sender.track.kind,
+              readyState: transceiver.sender.track.readyState,
+              enabled: transceiver.sender.track.enabled,
+            },
+            receiver: transceiver.receiver.track && {
+              kind: transceiver.receiver.track.kind,
+              readyState: transceiver.receiver.track.readyState,
+              muted: transceiver.receiver.track.muted,
+            },
+          })),
         })),
         mediaText: document.querySelector(".rv-media-call")?.textContent,
       }))

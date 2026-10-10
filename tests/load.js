@@ -25,8 +25,7 @@ const latencies = [];
 const failures = [];
 let connected = 0;
 let refreshEvents = 0;
-let hallId;
-let baseline = 0;
+const groups = [];
 let summary;
 
 async function request(account, path, body, measure = true) {
@@ -97,7 +96,7 @@ try {
     `Roomverse capacity check: ${count} real accounts, ${count} authenticated sockets, ${rounds} request rounds.`,
   );
   console.log(
-    "This checks API, Socket.IO and aggregate Hall attendance. It does not measure voice/video or production network capacity.",
+    "This checks API, Socket.IO and up to ten five-person friend rooms. It does not measure voice/video or production network capacity.",
   );
 
   const registrations = await batch(
@@ -130,22 +129,13 @@ try {
     0,
     `Account creation failed: ${registrationErrors.map((item) => item.reason.message).join("; ")}`,
   );
-  const initial = await request(
-    accounts[0],
-    "/api/bootstrap",
-    undefined,
-    false,
+  await Promise.all(
+    accounts.map(async (account) => {
+      const data = await request(account, "/api/bootstrap", undefined, false);
+      account.id = data.user.id;
+      account.resourceIds = data.resources.map((resource) => resource.id);
+    }),
   );
-  const hall = initial.halls.find(
-    (item) => item.published && item.access === "public",
-  );
-  assert.ok(
-    hall,
-    "A published public Hall is required for the shared-attendance check",
-  );
-  hallId = hall.id;
-  baseline = hall.attendance;
-
   const socketResults = await Promise.allSettled(accounts.map(socketConnect));
   const socketErrors = socketResults.filter(
     (item) => item.status === "rejected",
@@ -156,12 +146,85 @@ try {
     `Socket authentication failed: ${socketErrors.map((item) => item.reason.message).join("; ")}`,
   );
   assert.equal(connected, count);
-  await Promise.all(
-    accounts.map(async (account) => {
-      await request(account, "/api/action", { type: "hall.enter", hallId });
-      account.socket.emit("hall:join", { hallId });
-    }),
-  );
+  for (let offset = 0; offset < accounts.length; offset += 5) {
+    const group = accounts.slice(offset, offset + 5);
+    groups.push(group);
+    const host = group[0];
+    await request(host, "/api/action", { type: "session.start" }, false);
+    for (const guest of group.slice(1)) {
+      await request(
+        guest,
+        "/api/action",
+        {
+          type: "friend.request",
+          userId: host.id,
+          requestKnockAccess: true,
+          grantKnockAccess: false,
+        },
+        false,
+      );
+      const friendship = (
+        await request(host, "/api/bootstrap", undefined, false)
+      ).requests.find(
+        (item) =>
+          item.type === "friend" &&
+          item.fromId === guest.id &&
+          item.status === "pending",
+      );
+      await request(
+        host,
+        "/api/action",
+        {
+          type: "friend.respond",
+          requestId: friendship.id,
+          accept: true,
+          grantKnockAccess: true,
+        },
+        false,
+      );
+      await request(
+        guest,
+        "/api/action",
+        { type: "knock.create", hostId: host.id, message: "Capacity check" },
+        false,
+      );
+      const knock = (
+        await request(host, "/api/bootstrap", undefined, false)
+      ).requests.find(
+        (item) =>
+          item.type === "knock" &&
+          item.fromId === guest.id &&
+          item.status === "pending",
+      );
+      await request(
+        host,
+        "/api/action",
+        {
+          type: "request.respond",
+          requestId: knock.id,
+          accept: true,
+          permissions: {
+            chat: true,
+            voice: false,
+            screen: false,
+            interact: false,
+            invite: false,
+          },
+        },
+        false,
+      );
+      await request(
+        guest,
+        "/api/action",
+        { type: "session.join", requestId: knock.id },
+        false,
+      );
+    }
+    for (const member of group) {
+      member.expectedHostId = host.id;
+      member.expectedParticipantIds = group.map((person) => person.id).sort();
+    }
+  }
 
   for (let round = 0; round < rounds; round += 1) {
     const requests = await Promise.allSettled(
@@ -183,7 +246,17 @@ try {
           type: "profile.update",
           presence: round % 2 ? "busy" : "available",
         });
-        account.socket.emit("hall:heartbeat", { hallId });
+        assert.deepEqual(
+          bootstrap.resources.map((resource) => resource.id).sort(),
+          [...account.resourceIds].sort(),
+          "Private resource identity crossed accounts",
+        );
+        assert.equal(bootstrap.session.hostId, account.expectedHostId);
+        assert.deepEqual(
+          bootstrap.session.participants.map((member) => member.userId).sort(),
+          account.expectedParticipantIds,
+        );
+        assert.ok(bootstrap.session.participants.length <= 5);
       }),
     );
     for (const failed of requests.filter(
@@ -194,12 +267,16 @@ try {
     }
   }
 
-  const final = await request(accounts[0], "/api/bootstrap");
-  const attendance = final.halls.find((item) => item.id === hallId).attendance;
+  const finalRooms = await Promise.all(
+    groups.map((group) => request(group[0], "/api/bootstrap")),
+  );
   assert.equal(
-    attendance,
-    baseline + count,
-    "Hall attendance must deduplicate multiple API/socket joins by each user",
+    finalRooms.reduce(
+      (total, data) => total + data.session.participants.length,
+      0,
+    ),
+    count,
+    "All participants should remain admitted in their five-person rooms",
   );
   assert.equal(
     accounts.filter((account) => account.socket.connected).length,
@@ -220,7 +297,8 @@ try {
   summary = {
     accounts: count,
     concurrentSockets: connected,
-    hallAttendanceAdded: attendance - baseline,
+    concurrentRooms: groups.length,
+    admittedParticipants: count,
     measuredRequests: latencies.length,
     errors: failures.length,
     refreshEvents,
@@ -230,7 +308,7 @@ try {
       max: Math.round(latencies.at(-1) || 0),
     },
     scope:
-      "Local API, realtime notifications and Hall attendance; no voice/video capacity claim",
+      "Local API, realtime notifications and five-person friend room membership; no voice/video capacity claim",
   };
   assert.equal(failures.length, 0, JSON.stringify(failures));
   assert.ok(
@@ -244,13 +322,6 @@ try {
   const cleanupErrors = [];
   await batch(accounts, 5, async (account) => {
     try {
-      if (hallId)
-        await request(
-          account,
-          "/api/action",
-          { type: "hall.leave", hallId },
-          false,
-        );
       account.socket?.disconnect();
       await request(
         account,

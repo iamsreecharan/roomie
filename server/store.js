@@ -27,38 +27,87 @@ export const avatar = (i = 0) => ({
   hairStyle: ["waves", "crop", "bob", "curls"][i % 4],
   outfit: ["#708b75", "#b784a9", "#799eb4", "#de927b"][i % 4],
   accessory: ["none", "glasses", "earrings", "cap"][i % 4],
+  outfitStyle: ["jacket", "hoodie", "knit", "tee"][i % 4],
+  expression: ["smile", "calm", "grin", "wink"][i % 4],
+  eyes: ["#567a83", "#6c6258", "#5f6f52", "#7b6389"][i % 4],
 });
 export const roomObjects = () => [
-  { id: id("obj_"), type: "rug", x: 48, y: 70, rotation: 0, color: "#eed2b0" },
-  { id: id("obj_"), type: "sofa", x: 39, y: 53, rotation: 0, color: "#c97659" },
-  {
-    id: id("obj_"),
-    type: "plant",
-    x: 76,
-    y: 52,
-    rotation: 0,
-    color: "#718f68",
-  },
-  { id: id("obj_"), type: "desk", x: 70, y: 59, rotation: 0, color: "#b89873" },
-  { id: id("obj_"), type: "lamp", x: 27, y: 49, rotation: 0, color: "#e6c99f" },
-  { id: id("obj_"), type: "art", x: 63, y: 31, rotation: 0, color: "#d7a181" },
-  {
-    id: id("obj_"),
-    type: "shelf",
-    x: 20,
-    y: 46,
-    rotation: 0,
-    color: "#aa8966",
-  },
-  {
-    id: id("obj_"),
-    type: "table",
-    x: 44,
-    y: 65,
-    rotation: 0,
-    color: "#c4aa85",
-  },
+  { id: id("obj_"), type: "bed", x: 50, y: 58, rotation: 0, color: "#e6cbbb" },
 ];
+
+// Keep rooms and archived content intact while retiring authorizations that
+// belonged to the former follow-based visiting workflow.
+export function migrateFriendWorkflow(store) {
+  const legacyStarter = [
+    ["rug", 48, 70, "#eed2b0"],
+    ["sofa", 39, 53, "#c97659"],
+    ["plant", 76, 52, "#718f68"],
+    ["desk", 70, 59, "#b89873"],
+    ["lamp", 27, 49, "#e6c99f"],
+    ["art", 63, 31, "#d7a181"],
+    ["shelf", 20, 46, "#aa8966"],
+    ["table", 44, 65, "#c4aa85"],
+  ];
+  for (const room of store.all("room")) {
+    const untouched =
+      room.version === 1 &&
+      room.theme === "sage" &&
+      Array.isArray(room.history) &&
+      room.history.length === 0 &&
+      Array.isArray(room.objects) &&
+      room.objects.length === legacyStarter.length &&
+      room.objects.every((object, index) => {
+        const [type, x, y, color] = legacyStarter[index];
+        return (
+          object.type === type &&
+          object.x === x &&
+          object.y === y &&
+          object.rotation === 0 &&
+          object.color === color
+        );
+      });
+    if (untouched) {
+      room.objects = roomObjects();
+      room.version = 2;
+      store.put("room", room, room.ownerId);
+    }
+  }
+  for (const user of store.all("user")) {
+    if (user.settings.knocks === "followers") {
+      user.settings.knocks = "friends";
+      store.put("user", user);
+    }
+  }
+  for (const request of store.all("request")) {
+    if (
+      !["knock", "invite"].includes(request.type) ||
+      !["pending", "accepted"].includes(request.status)
+    )
+      continue;
+    const hostId =
+      request.hostId ??
+      (request.type === "knock" ? request.toId : request.fromId);
+    const guestId = request.type === "knock" ? request.fromId : request.toId;
+    const host = store.get(hostId),
+      guest = store.get(guestId);
+    const valid =
+      host &&
+      guest &&
+      store.has("friend", hostId, guestId) &&
+      store.has("friend", guestId, hostId) &&
+      !store.has("block", hostId, guestId) &&
+      !store.has("block", guestId, hostId) &&
+      (request.type !== "knock" ||
+        (store.has("knockAccess", hostId, guestId) &&
+          host.settings.knocks !== "nobody"));
+    if (!valid) {
+      request.status = "cancelled";
+      request.closedReason =
+        "Friendship and current room permission are required.";
+      store.put("request", request, request.toId);
+    }
+  }
+}
 
 export async function hashPassword(password) {
   const salt = randomBytes(16).toString("hex");

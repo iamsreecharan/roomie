@@ -29,42 +29,30 @@ import {
 import { Avatar, Button, Modal, Art, request } from "./lib.jsx";
 import { RoomPage, ToolsPage, AvatarPage } from "./pages/Room.jsx";
 import {
-  FeedPage,
   PeoplePage,
   ProfilePage,
-  VisitsPage,
   SettingsPage,
   NotificationsPage,
   SafetyPage,
 } from "./pages/Social.jsx";
-import {
-  HallsPage,
-  HallPage,
-  CreatorPage,
-  AdminPage,
-} from "./pages/Creators.jsx";
+import { VisitsPage } from "./pages/Visits.jsx";
+import { PageBoundary } from "./components/ErrorBoundary.jsx";
+import { AdminPage } from "./pages/Creators.jsx";
 
 const links = [
-  ["room", "My room", Home],
-  ["feed", "The neighborhood", Compass],
-  ["visits", "Visits & hangouts", DoorOpen],
-  ["people", "Find your people", Users],
-  ["halls", "Creator Halls", LayoutGrid],
+  ["room", "Room", Home],
+  ["people", "Friends", Users],
 ];
 const pages = {
   room: RoomPage,
   tools: ToolsPage,
   avatar: AvatarPage,
-  feed: FeedPage,
   people: PeoplePage,
   profile: ProfilePage,
   visits: VisitsPage,
   settings: SettingsPage,
   notifications: NotificationsPage,
   safety: SafetyPage,
-  halls: HallsPage,
-  hall: HallPage,
-  creator: CreatorPage,
   admin: AdminPage,
 };
 
@@ -173,22 +161,7 @@ function WelcomeArt() {
 function Auth({ onAuth, toast, config }) {
   const [mode, setMode] = useState("welcome"),
     [busy, setBusy] = useState(false),
-    [googleNotice, setGoogleNotice] = useState(false),
-    [browse, setBrowse] = useState(
-      new URLSearchParams(location.search).has("hall"),
-    ),
-    [publicHalls, setPublicHalls] = useState([]),
-    [preview, setPreview] = useState(null);
-  useEffect(() => {
-    if (browse)
-      request("/api/public/halls")
-        .then((r) => {
-          setPublicHalls(r.halls);
-          const target = new URLSearchParams(location.search).get("hall");
-          if (target) setPreview(r.halls.find((h) => h.id === target) || null);
-        })
-        .catch((e) => toast(e.message));
-  }, [browse]);
+    [googleNotice, setGoogleNotice] = useState(false);
   const [form, setForm] = useState({
     name: "",
     handle: "",
@@ -231,22 +204,19 @@ function Auth({ onAuth, toast, config }) {
     <main className="auth-page">
       <div className="auth-nav">
         <Brand />
-        <span className="auth-nav-note">A softer kind of social.</span>
+        <span className="auth-nav-note">Your room. Your friends.</span>
       </div>
       <div className="auth-content">
         <section className="auth-story">
-          <span className="eyebrow">
-            <span className="tiny-star">✦</span> A LITTLE SPACE. A WHOLE LOT OF
-            YOU.
-          </span>
+          <span className="eyebrow">A PLACE OF YOUR OWN</span>
           <h1>
-            Your own little
+            Your room.
             <br />
-            corner of the <em>universe.</em>
+            <em>Your people.</em>
           </h1>
           <p>
-            Make yourself at home. Keep your life in one cozy place, invite your
-            favorite people, and find a little inspiration along the way.
+            Make a space that feels like home. Add friends and invite them in,
+            on your terms.
           </p>
           <WelcomeArt />
           <div className="auth-promises">
@@ -263,17 +233,17 @@ function Auth({ onAuth, toast, config }) {
         </section>
         <section className="auth-card">
           <div className="auth-card-flower">✳︎</div>
-          <span className="eyebrow">YOUR DOOR IS OPEN</span>
+          <span className="eyebrow">ROOMVERSE</span>
           <h2>
             {mode === "signup"
-              ? "A room with your name on it."
+              ? "Create your room"
               : mode === "login"
-                ? "Welcome home."
-                : "Good things start with a little space."}
+                ? "Welcome back"
+                : "Make yourself at home"}
           </h2>
           <p className="muted">
             {mode === "welcome"
-              ? "Create your room. Make it yours. Let your world grow."
+              ? "A private room for you and your friends."
               : mode === "signup"
                 ? "One account. Your room, your people, your rules."
                 : "Your room is just where you left it."}
@@ -310,7 +280,7 @@ function Auth({ onAuth, toast, config }) {
             <>
               <div className="auth-or">
                 <span />
-                or make yourself at home
+                or continue with email
                 <span />
               </div>
               <Button onClick={() => setMode("signup")}>
@@ -318,7 +288,7 @@ function Auth({ onAuth, toast, config }) {
               </Button>
               <p className="auth-switch">
                 Already have a room?{" "}
-                <button onClick={() => setMode("login")}>Come on in</button>
+                <button onClick={() => setMode("login")}>Sign in</button>
               </p>
             </>
           ) : (
@@ -419,9 +389,7 @@ function Auth({ onAuth, toast, config }) {
                 </Button>
               </form>
               <p className="auth-switch">
-                {mode === "signup"
-                  ? "Already here?"
-                  : "New to the neighborhood?"}{" "}
+                {mode === "signup" ? "Already here?" : "New here?"}{" "}
                 <button
                   onClick={() =>
                     setMode(mode === "signup" ? "login" : "signup")
@@ -434,14 +402,14 @@ function Auth({ onAuth, toast, config }) {
           )}
           {config.demoEnabled && (
             <div className="demo-section">
-              <span className="eyebrow">TAKE A LITTLE LOOK AROUND</span>
+              <span className="eyebrow">TRY THE DEMO</span>
               <div className="demo-accounts">
                 <button disabled={busy} onClick={() => demo("mika")}>
                   <span className="demo-color sage">M</span>Personal room
                   <ArrowUpRight size={13} />
                 </button>
                 <button disabled={busy} onClick={() => demo("kira")}>
-                  <span className="demo-color clay">K</span>Creator studio
+                  <span className="demo-color clay">K</span>Friend’s room
                   <ArrowUpRight size={13} />
                 </button>
               </div>
@@ -457,91 +425,18 @@ function Auth({ onAuth, toast, config }) {
         </section>
       </div>
       <footer className="auth-footer">
-        <span>Built for the way you want to feel.</span>
+        <span>Rooms are private by default.</span>
         <div className="row">
-          <button onClick={() => setBrowse(true)}>
-            Wander through public Halls <ArrowUpRight size={12} />
-          </button>
           <button onClick={() => setGoogleNotice("privacy")}>
             Privacy & community
           </button>
         </div>
       </footer>
-      {browse && (
-        <Modal
-          wide
-          title={preview ? preview.title : "A little world of art"}
-          onClose={() => {
-            setBrowse(false);
-            setPreview(null);
-          }}
-        >
-          {preview ? (
-            <div className="stack">
-              <p className="muted">{preview.description}</p>
-              <div className="grid-3">
-                {(preview.artworks || []).map((a) => (
-                  <div className="card" key={a.id} style={{ padding: 12 }}>
-                    {a.url ? (
-                      <img
-                        src={a.url}
-                        alt={a.alt || a.title}
-                        style={{ width: "100%" }}
-                      />
-                    ) : (
-                      <Art variant={a.variant} />
-                    )}
-                    <h3 style={{ margin: "12px 0 4px" }}>{a.title}</h3>
-                    <p className="muted">{a.description}</p>
-                  </div>
-                ))}
-              </div>
-              <div className="row">
-                <Button variant="secondary" onClick={() => setPreview(null)}>
-                  More Halls
-                </Button>
-                <Button
-                  onClick={() => {
-                    setBrowse(false);
-                    setMode("signup");
-                  }}
-                >
-                  Make a room of your own
-                  <ArrowRight size={15} />
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <div className="grid-3">
-              {publicHalls.map((h) => (
-                <button
-                  className="card public-preview-card"
-                  key={h.id}
-                  onClick={() => setPreview(h)}
-                >
-                  <Art variant={h.cover} />
-                  <h3>{h.title}</h3>
-                  <p className="muted">
-                    {h.artworkCount || h.artworks?.length || 0} little
-                    discoveries
-                  </p>
-                </button>
-              ))}
-              {!publicHalls.length && (
-                <p className="muted">
-                  The galleries are getting ready. Come back for a little
-                  inspiration.
-                </p>
-              )}
-            </div>
-          )}
-        </Modal>
-      )}
       {googleNotice && (
         <Modal
           title={
             googleNotice === "privacy"
-              ? "A little care goes a long way"
+              ? "Privacy & community"
               : "Connect Google sign-in"
           }
           onClose={() => setGoogleNotice(false)}
@@ -549,9 +444,10 @@ function Auth({ onAuth, toast, config }) {
           {googleNotice === "privacy" ? (
             <div className="stack">
               <p>
-                Your journal, tasks, and plans are private by default. Following
-                someone never grants room admission. Private visits require
-                approval from the host and a choice to join from the guest.
+                Your journal, tasks, and plans are private by default.
+                Friendship alone never grants room or private-content access.
+                Private visits require approval from the host and a choice to
+                join from the guest.
               </p>
               <p>
                 Room chat is temporary. Screenshots and recordings cannot be
@@ -559,22 +455,13 @@ function Auth({ onAuth, toast, config }) {
                 Be kind, respect creative ownership, and use the report or block
                 tools when needed.
               </p>
-              <p>
-                This pilot is currently for adults aged 18 or older. Regional
-                child-protection requirements and final legal policies must be
-                reviewed before a public launch.
-              </p>
+              <p>Roomverse is currently for adults aged 18 or older.</p>
             </div>
           ) : (
             <div className="stack">
               <p>
-                Google sign-in is built in and needs this environment’s Google
-                OAuth credentials before it can open your room.
-              </p>
-              <p className="muted">
-                The project owner can configure GOOGLE_CLIENT_ID,
-                GOOGLE_CLIENT_SECRET and PUBLIC_URL as described in the README.
-                You can create an account with email in the meantime.
+                Google sign-in isn’t available here yet. You can create an
+                account with email or sign in with your password.
               </p>
               <Button
                 onClick={() => {
@@ -593,50 +480,229 @@ function Auth({ onAuth, toast, config }) {
   );
 }
 
+function initialRoute() {
+  const parts = location.hash.replace(/^#\/?/, "").split("/");
+  const page = Object.hasOwn(pages, parts[0]) ? parts[0] : "room";
+  let id = null;
+  try {
+    id = parts[1] ? decodeURIComponent(parts.slice(1).join("/")) : null;
+  } catch {
+    /* Invalid links open the room. */
+  }
+  return { page, id };
+}
+
+function FriendSearch({ users, navigate }) {
+  const [query, setQuery] = useState("");
+  const [open, setOpen] = useState(false);
+  const [active, setActive] = useState(-1);
+  const ref = useRef(null);
+  const term = query.trim().replace(/^@/, "").toLowerCase();
+  const matches = term
+    ? users
+        .filter(
+          (u) =>
+            !u.blocked && `${u.name} ${u.handle}`.toLowerCase().includes(term),
+        )
+        .slice(0, 6)
+    : [];
+  useEffect(() => {
+    const close = (e) => {
+      if (!ref.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, []);
+  function choose(user) {
+    setOpen(false);
+    setQuery("");
+    setActive(-1);
+    navigate("profile", user.id);
+  }
+  return (
+    <div className="friend-search-wrap" ref={ref}>
+      <form
+        className="global-search"
+        role="search"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (open && active >= 0 && matches[active]) choose(matches[active]);
+          else {
+            navigate("people", query.trim());
+            setOpen(false);
+          }
+        }}
+      >
+        <Search size={18} />
+        <input
+          aria-label="Search friends"
+          role="combobox"
+          aria-expanded={open && !!term}
+          aria-controls="friend-search-results"
+          aria-autocomplete="list"
+          aria-activedescendant={
+            active >= 0 ? `friend-result-${active}` : undefined
+          }
+          placeholder="Search name or @username"
+          value={query}
+          onFocus={() => setOpen(true)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+            setActive(-1);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setOpen(false);
+              setActive(-1);
+            }
+            if (e.key === "ArrowDown") {
+              e.preventDefault();
+              setOpen(true);
+              setActive((i) =>
+                matches.length ? (i + 1) % matches.length : -1,
+              );
+            }
+            if (e.key === "ArrowUp") {
+              e.preventDefault();
+              setActive((i) =>
+                matches.length ? (i <= 0 ? matches.length - 1 : i - 1) : -1,
+              );
+            }
+          }}
+        />
+        {query && (
+          <button
+            type="button"
+            aria-label="Clear search"
+            onClick={() => {
+              setQuery("");
+              setActive(-1);
+            }}
+          >
+            <X size={15} />
+          </button>
+        )}
+      </form>
+      {open && term && (
+        <div
+          className="friend-search-results"
+          id="friend-search-results"
+          role="listbox"
+          aria-label="People suggestions"
+        >
+          {matches.map((u, i) => (
+            <button
+              type="button"
+              id={`friend-result-${i}`}
+              role="option"
+              aria-selected={i === active}
+              key={u.id}
+              onClick={() => choose(u)}
+              className={active === i ? "selected" : ""}
+            >
+              <Avatar user={u} size={42} />
+              <span>
+                <strong>{u.name}</strong>
+                <small>@{u.handle}</small>
+              </span>
+              {u.isFriend && <span className="search-friend-tag">Friend</span>}
+            </button>
+          ))}
+          {!matches.length && <p>No matching people.</p>}
+          <button
+            className="search-view-all"
+            type="button"
+            onClick={() => {
+              navigate("people", query.trim());
+              setOpen(false);
+            }}
+          >
+            Search friends <ArrowRight size={15} />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
-  const [data, setData] = useState(null),
-    [loading, setLoading] = useState(true),
-    [error, setError] = useState(""),
-    [config, setConfig] = useState({}),
-    [page, setPage] = useState(
-      new URLSearchParams(location.search).has("hall") ? "hall" : "room",
-    ),
-    [selectedId, setSelectedId] = useState(
-      new URLSearchParams(location.search).get("hall"),
-    ),
-    [toasts, setToasts] = useState([]),
-    [mobileNav, setMobileNav] = useState(false),
-    [socket, setSocket] = useState(null),
-    [online, setOnline] = useState(navigator.onLine),
-    [search, setSearch] = useState("");
-  const timer = useRef();
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [config, setConfig] = useState({});
+  const [route, setRoute] = useState(initialRoute);
+  const [toasts, setToasts] = useState([]);
+  const [mobileNav, setMobileNav] = useState(false);
+  const [socket, setSocket] = useState(null);
+  const [online, setOnline] = useState(navigator.onLine);
+  const timer = useRef(null);
+  const refreshSequence = useRef(0);
+  const { page, id: selectedId } = route;
   const toast = useCallback((message) => {
     const id = Date.now() + Math.random();
-    setToasts((t) => [...t.slice(-2), { id, message }]);
+    setToasts((t) => [...t.slice(-2), { id, message: String(message) }]);
     setTimeout(() => setToasts((t) => t.filter((v) => v.id !== id)), 5500);
   }, []);
   const refresh = useCallback(async () => {
+    const sequence = ++refreshSequence.current;
     try {
       const next = await request("/api/bootstrap");
-      setData(next);
-      setError("");
+      if (sequence === refreshSequence.current) {
+        setData(next);
+        setError("");
+      }
       return next;
     } catch (e) {
-      if (/auth|sign in|unauthorized|log in|Authentication/i.test(e.message)) {
-        setData(null);
+      if (e.status === 401) {
+        if (sequence === refreshSequence.current) setData(null);
         return null;
       }
       throw e;
     }
   }, []);
   useEffect(() => {
-    Promise.all([request("/api/config").then(setConfig), refresh()])
+    let mounted = true;
+    Promise.all([
+      request("/api/config").then((v) => {
+        if (mounted) setConfig(v);
+      }),
+      refresh(),
+    ])
       .catch((e) => {
-        if (!/auth|sign in|unauthorized|log in/i.test(e.message))
-          setError(e.message);
+        if (mounted && e.status !== 401) setError(e.message);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+    return () => {
+      mounted = false;
+    };
   }, [refresh]);
+  const navigate = useCallback((next, id = null) => {
+    const page = Object.hasOwn(pages, next) ? next : "room";
+    const route = { page, id: id == null ? null : String(id) };
+    setRoute(route);
+    history.pushState(
+      null,
+      "",
+      `#/${page}${route.id ? `/${encodeURIComponent(route.id)}` : ""}`,
+    );
+    setMobileNav(false);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, []);
+  useEffect(() => {
+    const change = () => {
+      setRoute(initialRoute());
+      setMobileNav(false);
+    };
+    window.addEventListener("popstate", change);
+    window.addEventListener("hashchange", change);
+    return () => {
+      window.removeEventListener("popstate", change);
+      window.removeEventListener("hashchange", change);
+    };
+  }, []);
   useEffect(() => {
     const on = () => setOnline(true),
       off = () => setOnline(false);
@@ -651,19 +717,17 @@ export default function App() {
     if (!data?.user?.id) return;
     const s = io({ transports: ["websocket", "polling"] });
     setSocket(s);
+    const sync = () => refresh().catch((e) => toast(e.message));
     s.on("refresh", () => {
       clearTimeout(timer.current);
-      timer.current = setTimeout(
-        () => refresh().catch((e) => toast(e.message)),
-        90,
-      );
+      timer.current = setTimeout(sync, 90);
     });
-    s.on("connect_error", () => {});
+    s.on("connect", sync);
     s.on("session:revoked", () => {
-      toast("This visit has ended. Your room access has been cleared.");
-      refresh();
+      toast("Your room visit has ended.");
+      sync();
     });
-    s.on("session:ended", () => refresh());
+    s.on("session:ended", sync);
     return () => {
       clearTimeout(timer.current);
       s.disconnect();
@@ -680,12 +744,14 @@ export default function App() {
       Boolean(data?.user?.settings?.highContrast),
     );
   }, [data?.user?.settings]);
-  const navigate = useCallback((next, id = null) => {
-    setPage(next);
-    setSelectedId(id);
-    setMobileNav(false);
-    window.scrollTo({ top: 0, behavior: "instant" });
-  }, []);
+  useEffect(() => {
+    if (!mobileNav) return;
+    const key = (e) => {
+      if (e.key === "Escape") setMobileNav(false);
+    };
+    document.addEventListener("keydown", key);
+    return () => document.removeEventListener("keydown", key);
+  }, [mobileNav]);
   const act = useCallback(
     async (type, payload = {}) => {
       const result = await request("/api/action", {
@@ -700,6 +766,7 @@ export default function App() {
   const logout = async () => {
     try {
       await request("/api/auth/logout", { method: "POST", body: "{}" });
+      ++refreshSequence.current;
       setData(null);
       navigate("room");
     } catch (e) {
@@ -714,12 +781,12 @@ export default function App() {
         age: Number(form.get("age")),
         consent: true,
       });
-      toast("Welcome to your little universe.");
+      toast("Your room is ready.");
     } catch (e) {
       toast(e.message);
     }
   };
-  const Toasts = () => (
+  const toastsView = (
     <div className="toast-region" aria-live="polite">
       {toasts.map((t) => (
         <div className="toast" key={t.id}>
@@ -739,17 +806,31 @@ export default function App() {
       <div className="loading-screen">
         <Brand />
         <span className="loading-orbit" />
-        <p>Making a little space for you…</p>
+        <p>Opening your room…</p>
       </div>
     );
   if (error)
     return (
       <main className="loading-screen">
         <Brand />
-        <h2>We couldn’t open the door.</h2>
+        <h2>Couldn’t connect</h2>
         <p>{error}</p>
-        <Button onClick={() => location.reload()}>Try again</Button>
-        <Toasts />
+        <Button
+          onClick={async () => {
+            setLoading(true);
+            try {
+              await refresh();
+              setError("");
+            } catch (e) {
+              setError(e.message);
+            } finally {
+              setLoading(false);
+            }
+          }}
+        >
+          Try again
+        </Button>
+        {toastsView}
       </main>
     );
   if (!data?.user)
@@ -760,27 +841,35 @@ export default function App() {
           toast={toast}
           onAuth={async () => {
             await refresh();
-            const target = new URLSearchParams(location.search).get("hall");
-            navigate(target ? "hall" : "room", target);
+            navigate("room");
           }}
         />
-        <Toasts />
+        {toastsView}
       </>
     );
   const Page = pages[page] || RoomPage;
   const unread = (data.notifications || []).filter((n) => !n.read).length;
-  const pending = (data.requests || []).filter(
-    (r) => r.status?.toLowerCase() === "pending" && r.toId === data.user.id,
+  const friendPending = (data.requests || []).filter(
+    (r) =>
+      r.type === "friend" && r.status === "pending" && r.toId === data.user.id,
   ).length;
-  const friends = (data.users || [])
-    .filter((u) => u.following && !u.blocked)
-    .slice(0, 4);
-  const myTasks =
-    (data.resources || []).find((r) => r.type === "tasks")?.content || [];
-  const tasks = Array.isArray(myTasks) ? myTasks : [];
+  const labels = {
+    tools: "Private tools",
+    avatar: "Avatar studio",
+    visits: "Invites & knocks",
+    settings: "Settings",
+    profile: "Profile",
+    notifications: "Notifications",
+    safety: "Safety",
+    admin: "Review desk",
+  };
+  const title = links.find((x) => x[0] === page)?.[1] || labels[page] || "Room";
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${mobileNav ? "open" : ""}`}>
+      <aside
+        className={`sidebar ${mobileNav ? "open" : ""}`}
+        aria-label="Navigation"
+      >
         <div className="sidebar-brand">
           <Brand />
           <button
@@ -791,76 +880,61 @@ export default function App() {
             <X size={20} />
           </button>
         </div>
-        <span className="sidebar-caption">YOUR LITTLE UNIVERSE</span>
-        <nav className="primary-nav">
+        <nav className="primary-nav" aria-label="Main navigation">
           {links.map(([id, label, Icon]) => (
             <button
               key={id}
-              className={`nav-item ${page === id || (id === "halls" && page === "hall") ? "active" : ""}`}
+              className={`nav-item ${page === id ? "active" : ""}`}
+              aria-current={page === id ? "page" : undefined}
               onClick={() => navigate(id)}
             >
-              <Icon size={19} strokeWidth={1.7} />
+              <Icon size={21} strokeWidth={1.7} />
               <span>{label}</span>
-              {id === "visits" && pending > 0 && (
-                <b className="nav-count">{pending}</b>
+              {id === "people" && friendPending > 0 && (
+                <b className="nav-count">{friendPending}</b>
               )}
               {page === id && <span className="nav-active-dot" />}
             </button>
           ))}
         </nav>
         <div className="sidebar-divider" />
-        <span className="sidebar-caption">A SPACE TO CREATE</span>
-        <nav className="primary-nav">
+        <nav className="primary-nav" aria-label="Your room tools">
           <button
             className={`nav-item ${page === "tools" ? "active" : ""}`}
             onClick={() => navigate("tools")}
           >
-            <BookOpen size={19} strokeWidth={1.7} />
-            <span>My private corner</span>
+            <BookOpen size={20} />
+            <span>Private tools</span>
             <LockKeyhole size={13} className="nav-small" />
           </button>
           <button
             className={`nav-item ${page === "avatar" ? "active" : ""}`}
             onClick={() => navigate("avatar")}
           >
-            <Palette size={19} strokeWidth={1.7} />
+            <Palette size={20} />
             <span>Avatar studio</span>
-          </button>
-          <button
-            className={`nav-item ${page === "creator" ? "active" : ""}`}
-            onClick={() => navigate("creator")}
-          >
-            <Sparkles size={19} strokeWidth={1.7} />
-            <span>Creator studio</span>
           </button>
           {data.user.role === "admin" && (
             <button
               className={`nav-item ${page === "admin" ? "active" : ""}`}
               onClick={() => navigate("admin")}
             >
-              <ShieldCheck size={19} />
+              <ShieldCheck size={20} />
               <span>Review desk</span>
             </button>
           )}
         </nav>
-        <button
-          className="sidebar-inspiration"
-          onClick={() => navigate("halls")}
-        >
-          <span className="inspiration-doodle">✳︎</span>
-          <span>A world of little wonders.</span>
-          <small>
-            Find your next inspiration <ArrowUpRight size={13} />
-          </small>
-        </button>
         <div className="sidebar-bottom">
-          <button className="nav-item" onClick={() => navigate("settings")}>
-            <Settings size={18} />
-            <span>Settings & privacy</span>
+          <button
+            className={`nav-item ${page === "settings" ? "active" : ""}`}
+            onClick={() => navigate("settings")}
+          >
+            <Settings size={20} />
+            <span>Settings</span>
           </button>
           <div className="sidebar-profile">
             <button onClick={() => navigate("profile", data.user.id)}>
-              <Avatar user={data.user} size={39} />
+              <Avatar user={data.user} size={42} />
               <span>
                 <strong>{data.user.name}</strong>
                 <small>@{data.user.handle}</small>
@@ -891,46 +965,20 @@ export default function App() {
               <Menu size={21} />
             </button>
             <span className="topbar-breadcrumb">
-              Your universe <ChevronRight size={12} />
-              <strong>
-                {links.find((x) => x[0] === page)?.[1] ||
-                  {
-                    tools: "My private corner",
-                    avatar: "Avatar studio",
-                    creator: "Creator studio",
-                    hall: "Inside the Hall",
-                    settings: "Settings & privacy",
-                    profile: "Profile",
-                    notifications: "Notifications",
-                    safety: "Safety",
-                    admin: "Review desk",
-                  }[page]}
-              </strong>
+              <strong>{title}</strong>
             </span>
           </div>
+          <FriendSearch
+            users={(data.users || []).filter((u) => u.id !== data.user.id)}
+            navigate={navigate}
+          />
           <div className="topbar-actions">
-            <form
-              className="global-search"
-              onSubmit={(e) => {
-                e.preventDefault();
-                navigate("people", search);
-              }}
-            >
-              <Search size={16} />
-              <input
-                aria-label="Search people"
-                placeholder="Find a little connection…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <kbd>↵</kbd>
-            </form>
             <button
               className="topbar-notification icon-button"
               aria-label={`Notifications${unread ? `, ${unread} unread` : ""}`}
               onClick={() => navigate("notifications")}
             >
-              <Bell size={19} />
+              <Bell size={20} />
               {unread > 0 && <span />}
             </button>
             <button
@@ -938,189 +986,67 @@ export default function App() {
               aria-label="Your profile"
               onClick={() => navigate("profile", data.user.id)}
             >
-              <Avatar user={data.user} size={35} />
+              <Avatar user={data.user} size={36} />
             </button>
           </div>
         </header>
         {!online && (
           <div className="connection-banner">
-            You’re offline. Keep this page open and reconnect before saving
-            changes.
+            You’re offline. Reconnect to save changes.
           </div>
         )}
-        <div
-          className={`workspace-content ${page === "room" ? "with-orbit" : ""}`}
-        >
+        <main className="workspace-content" id="main-content">
           <div className="page-content">
-            <Page
-              data={data}
-              act={act}
-              refresh={refresh}
-              navigate={navigate}
-              toast={toast}
-              selectedId={selectedId}
-              socket={socket}
-              config={config}
-            />
-          </div>
-          {page === "room" && (
-            <aside className="orbit-panel">
-              <section className="orbit-note">
-                <span className="orbit-spark">✦</span>
-                <p>
-                  A room that feels
-                  <br />
-                  like <em>you.</em>
-                </p>
-                <span>Make a little time for yourself.</span>
-              </section>
-              <section className="orbit-section">
-                <div className="section-title">
-                  <h3>Your orbit</h3>
-                  <button
-                    className="icon-button"
-                    aria-label="Find people"
-                    onClick={() => navigate("people")}
-                  >
-                    <Plus size={17} />
-                  </button>
-                </div>
-                {friends.length ? (
-                  friends.map((u) => (
-                    <button
-                      className="orbit-person"
-                      key={u.id}
-                      onClick={() => navigate("profile", u.id)}
-                    >
-                      <div className="orbit-avatar">
-                        <Avatar user={u} size={43} />
-                        {["available", "open"].includes(u.presence) &&
-                          u.settings?.onlineVisible !== false && <i />}
-                      </div>
-                      <span>
-                        <strong>{u.name}</strong>
-                        <small>
-                          {u.verified
-                            ? "Making little wonders"
-                            : ["available", "open"].includes(u.presence)
-                              ? "Around the neighborhood"
-                              : "In their own little world"}
-                        </small>
-                      </span>
-                      <ArrowUpRight size={15} />
-                    </button>
-                  ))
-                ) : (
-                  <p className="muted">
-                    A little connection goes a long way. Find someone to follow.
-                  </p>
-                )}
-                <button
-                  className="orbit-link"
-                  onClick={() => navigate("people")}
-                >
-                  Find your people <ArrowRight size={14} />
-                </button>
-              </section>
-              <section className="orbit-section">
-                <div className="section-title">
-                  <h3>A little focus</h3>
-                  <LockKeyhole size={14} />
-                </div>
-                {tasks
-                  .filter((t) => !t.done)
-                  .slice(0, 3)
-                  .map((t) => (
-                    <button
-                      key={t.id}
-                      className="orbit-task"
-                      onClick={() => navigate("tools", "tasks")}
-                    >
-                      <span className="task-circle" />
-                      {t.text}
-                    </button>
-                  ))}
-                {!tasks.filter((t) => !t.done).length && (
-                  <p className="muted">A clear board. Room to breathe.</p>
-                )}
-                <button
-                  className="orbit-link"
-                  onClick={() => navigate("tools", "tasks")}
-                >
-                  Open my private corner <ArrowRight size={14} />
-                </button>
-              </section>
-              {data.halls?.[0] && (
-                <button
-                  className="orbit-hall"
-                  onClick={() => navigate("hall", data.halls[0].id)}
-                >
-                  <div className="orbit-hall-art">
-                    <Art variant={data.halls[0].cover} />
-                    <span>WORTH A WANDER</span>
-                  </div>
-                  <div>
-                    <h3>{data.halls[0].title}</h3>
-                    <p>
-                      A little art for your day <ArrowUpRight size={14} />
-                    </p>
-                  </div>
-                </button>
-              )}
-              <p className="orbit-privacy">
-                <LockKeyhole size={13} />
-                Your private things stay private.
-                <br />
-                You decide who comes in.
-              </p>
-            </aside>
-          )}
-        </div>
-        <footer className="app-footer">
-          <span>
-            <span className="footer-dot" /> Your space, at your pace.
-          </span>
-          <button onClick={() => navigate("safety")}>
-            A little help & safety <ArrowUpRight size={12} />
-          </button>
-        </footer>
-      </div>
-      <nav className="mobile-tabs">
-        {links
-          .filter(([id]) => ["room", "feed", "visits", "halls"].includes(id))
-          .map(([id, label, Icon]) => (
-            <button
-              className={page === id ? "active" : ""}
-              key={id}
-              onClick={() => navigate(id)}
+            <PageBoundary
+              key={`${page}:${selectedId || ""}`}
+              onRecover={async () => {
+                await refresh();
+                navigate("room");
+              }}
             >
-              <Icon size={21} />
-              <span>
-                {id === "feed"
-                  ? "Feed"
-                  : id === "room"
-                    ? "Room"
-                    : id === "visits"
-                      ? "Visits"
-                      : "Halls"}
-              </span>
-            </button>
-          ))}
+              <Page
+                key={`${page}:${selectedId || ""}`}
+                data={data}
+                act={act}
+                refresh={refresh}
+                navigate={navigate}
+                toast={toast}
+                selectedId={selectedId}
+                socket={socket}
+                config={config}
+              />
+            </PageBoundary>
+          </div>
+        </main>
+      </div>
+      <nav className="mobile-tabs" aria-label="Mobile navigation">
+        {links.map(([id, label, Icon]) => (
+          <button
+            className={page === id ? "active" : ""}
+            aria-current={page === id ? "page" : undefined}
+            key={id}
+            onClick={() => navigate(id)}
+          >
+            <Icon size={23} />
+            <span>{label}</span>
+            {id === "people" && friendPending > 0 && (
+              <i className="mobile-nav-count">{friendPending}</i>
+            )}
+          </button>
+        ))}
         <button
           className={page === "profile" ? "active" : ""}
           onClick={() => navigate("profile", data.user.id)}
         >
-          <Avatar user={data.user} size={22} />
+          <Avatar user={data.user} size={26} />
           <span>Me</span>
         </button>
       </nav>
-      <Toasts />
+      {toastsView}
       {data.user.needsConsent && (
         <Modal
-          title="Before you make yourself at home"
-          onClose={() =>
-            toast("Please complete age and consent to activate your room.")
-          }
+          title="Activate your room"
+          onClose={() => toast("Confirm your age and consent to continue.")}
         >
           <form className="stack" onSubmit={complete}>
             <p>Confirm your age and consent to activate your Google account.</p>
@@ -1130,7 +1056,7 @@ export default function App() {
             </label>
             <label className="check-label">
               <input type="checkbox" required />I agree to the community and
-              privacy guidelines. I understand visit chat is temporary.
+              privacy guidelines. Room chat is temporary.
             </label>
             <Button type="submit">
               Open my room

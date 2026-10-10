@@ -219,9 +219,12 @@ export async function request(path, options = {}) {
   } catch {
     throw new Error("The server could not complete this request.");
   }
-  if (!res.ok)
-    throw new Error(
+  if (!res.ok) {
+    const error = new Error(
       data.error || data.message || "Something went wrong. Please try again.",
     );
+    error.status = res.status;
+    throw error;
+  }
   return data;
 }

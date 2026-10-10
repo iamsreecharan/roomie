@@ -8,6 +8,7 @@ import { mkdirSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
 import {
   createStore,
   seedStore,
+  migrateFriendWorkflow,
   addHome,
   id,
   now,
@@ -102,6 +103,7 @@ export async function createServer(options = {}) {
   const { db } = store;
   mkdirSync(mediaDir, { recursive: true, mode: 0o700 });
   await seedStore(store, allowDemo);
+  migrateFriendWorkflow(store);
   const dummyPasswordHash = await hashPassword(randomBytes(32).toString("hex"));
   const app = express();
   if (production) app.set("trust proxy", 1);
@@ -272,6 +274,66 @@ export async function createServer(options = {}) {
   function blocked(a, b) {
     return store.has("block", a, b) || store.has("block", b, a);
   }
+  function areFriends(a, b) {
+    return (
+      store.has("friend", a, b) && store.has("friend", b, a) && !blocked(a, b)
+    );
+  }
+  function knocksAllowed(hostId, guestId) {
+    const host = store.get(hostId);
+    return (
+      !!host &&
+      areFriends(hostId, guestId) &&
+      store.has("knockAccess", hostId, guestId) &&
+      host.settings.knocks !== "nobody"
+    );
+  }
+  function visitParties(request) {
+    return {
+      hostId:
+        request.hostId ??
+        (request.type === "knock" ? request.toId : request.fromId),
+      guestId: request.type === "knock" ? request.fromId : request.toId,
+    };
+  }
+  function relatedRequest(request, a, b) {
+    if (
+      (request.fromId === a && request.toId === b) ||
+      (request.fromId === b && request.toId === a)
+    )
+      return true;
+    if (!["knock", "invite"].includes(request.type)) return false;
+    const { hostId, guestId } = visitParties(request);
+    return (hostId === a && guestId === b) || (hostId === b && guestId === a);
+  }
+  function removeFriendship(a, b) {
+    db.exec("BEGIN");
+    try {
+      for (const kind of ["friend", "knockAccess"]) {
+        store.unlink(kind, a, b);
+        store.unlink(kind, b, a);
+      }
+      for (const request of store.all("request"))
+        if (
+          relatedRequest(request, a, b) &&
+          ["pending", "accepted"].includes(request.status)
+        ) {
+          if (request.type === "friend" && request.status === "accepted")
+            continue;
+          request.status = "cancelled";
+          store.put("request", request, request.toId);
+        }
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+    const current = sessionFor(a);
+    if (current && current === sessionFor(b)) {
+      if (current.hostId === a) leaveSession(b);
+      else if (current.hostId === b) leaveSession(a);
+    }
+  }
   function notify(userId, title, message) {
     if (!store.get(userId)) return;
     store.put(
@@ -428,16 +490,7 @@ export async function createServer(options = {}) {
     );
   }
   function canReadPost(userId, post) {
-    if (
-      blocked(userId, post.authorId) ||
-      store.has("hidePost", userId, post.id)
-    )
-      return false;
-    if (post.authorId === userId) return true;
-    if (post.visibility === "public") return true;
-    if (post.visibility === "followers")
-      return store.has("follow", userId, post.authorId);
-    return store.has("closeFriend", post.authorId, userId);
+    return !!userId && post.authorId === userId;
   }
   function canReadHall(userId, hall) {
     if (userId && blocked(userId, hall.ownerId)) return false;
@@ -493,9 +546,19 @@ export async function createServer(options = {}) {
       .all("request")
       .filter(
         (r) =>
-          (r.fromId === user.id || r.toId === user.id) &&
+          (r.fromId === user.id ||
+            r.toId === user.id ||
+            r.hostId === user.id) &&
           !blocked(r.fromId, r.toId),
       );
+    const pendingFriendRequests = relevantRequests.filter(
+      (r) => r.type === "friend" && r.status === "pending",
+    );
+    const myFriendIds = new Set(
+      store
+        .targets("friend", user.id)
+        .filter((friendId) => areFriends(user.id, friendId)),
+    );
     const posts = store
       .all("post")
       .filter((p) => canReadPost(user.id, p))
@@ -535,16 +598,51 @@ export async function createServer(options = {}) {
             store.has("block", user.id, u.id) ||
             (!blocked(user.id, u.id) &&
               (u.settings.discoverable ||
-                store.has("follow", user.id, u.id) ||
+                myFriendIds.has(u.id) ||
                 referenced.has(u.id))),
         )
-        .map((u) => ({
-          ...safeUser(u),
-          following: store.has("follow", user.id, u.id),
-          closeFriend: store.has("closeFriend", user.id, u.id),
-          followers: store.count("follow", u.id),
-          blocked: store.has("block", user.id, u.id),
-        })),
+        .map((u) => {
+          const isFriend = myFriendIds.has(u.id);
+          const incoming = pendingFriendRequests.find(
+            (r) => r.fromId === u.id && r.toId === user.id,
+          );
+          const outgoing = pendingFriendRequests.find(
+            (r) => r.fromId === user.id && r.toId === u.id,
+          );
+          const mutuals =
+            u.id === user.id
+              ? []
+              : allUsers
+                  .filter(
+                    (other) =>
+                      myFriendIds.has(other.id) &&
+                      other.id !== u.id &&
+                      areFriends(u.id, other.id),
+                  )
+                  .map(safeUser);
+          return {
+            ...safeUser(u),
+            following: store.has("follow", user.id, u.id),
+            closeFriend: store.has("closeFriend", user.id, u.id),
+            followers: store.count("follow", u.id),
+            blocked: store.has("block", user.id, u.id),
+            isFriend,
+            friendshipStatus: isFriend
+              ? "friends"
+              : incoming
+                ? "incoming"
+                : outgoing
+                  ? "outgoing"
+                  : "none",
+            canKnock: isFriend && knocksAllowed(u.id, user.id),
+            canKnockAtMine: isFriend && store.has("knockAccess", user.id, u.id),
+            mutualCount: mutuals.length,
+            mutuals,
+            incomingRequestId: incoming?.id ?? null,
+            outgoingRequestId: outgoing?.id ?? null,
+            friendRequestId: incoming?.id ?? outgoing?.id ?? null,
+          };
+        }),
       room: { ...own, history: own.history.length > 0 },
       resources: store
         .all("resource", user.id)
@@ -563,7 +661,7 @@ export async function createServer(options = {}) {
       myVisits: relevantRequests.filter(
         (r) =>
           r.status === "accepted" &&
-          r.type !== "access" &&
+          ["knock", "invite"].includes(r.type) &&
           (r.type === "knock" ? r.fromId === user.id : r.toId === user.id),
       ),
       halls: allHalls.map((h) => hallView(h, user.id)),
@@ -1042,6 +1140,29 @@ export async function createServer(options = {}) {
         outfit: /^#[0-9a-f]{3,8}$/i.test(a.outfit)
           ? a.outfit
           : user.avatar.outfit,
+        eyes: /^#[0-9a-f]{3,8}$/i.test(a.eyes)
+          ? a.eyes
+          : /^#[0-9a-f]{3,8}$/i.test(user.avatar.eyes)
+            ? user.avatar.eyes
+            : "#567a83",
+        outfitStyle: pick(
+          a.outfitStyle ??
+            (["hoodie", "jacket", "tee", "knit"].includes(
+              user.avatar.outfitStyle,
+            )
+              ? user.avatar.outfitStyle
+              : "jacket"),
+          ["hoodie", "jacket", "tee", "knit"],
+          "outfit style",
+        ),
+        expression: pick(
+          a.expression ??
+            (["smile", "grin", "calm", "wink"].includes(user.avatar.expression)
+              ? user.avatar.expression
+              : "smile"),
+          ["smile", "grin", "calm", "wink"],
+          "expression",
+        ),
         hairStyle: pick(
           a.hairStyle ?? user.avatar.hairStyle,
           [
@@ -1076,7 +1197,7 @@ export async function createServer(options = {}) {
       if (key === "knocks")
         user.settings[key] = pick(
           value,
-          ["everyone", "followers", "nobody"],
+          ["everyone", "friends", "nobody"],
           "knock setting",
         );
       else if (key in defaults()) user.settings[key] = flag(value);
@@ -1151,13 +1272,150 @@ export async function createServer(options = {}) {
     store.put("user", user);
     return { ok: true };
   };
+  actions["friend.request"] = (user, p) => {
+    const other = getUser(p.userId);
+    if (other.id === user.id || blocked(user.id, other.id))
+      fail("This person cannot receive a friend request.", 403);
+    if (other.needsConsent)
+      fail("This account is not ready for friend requests.", 403);
+    if (areFriends(user.id, other.id)) fail("You are already friends.", 409);
+    rate(`friend:${user.id}`, 20, 60000);
+    const pending = store
+      .all("request")
+      .find(
+        (r) =>
+          r.type === "friend" &&
+          r.status === "pending" &&
+          ((r.fromId === user.id && r.toId === other.id) ||
+            (r.fromId === other.id && r.toId === user.id)),
+      );
+    if (pending)
+      fail(
+        pending.fromId === user.id
+          ? "Your friend request is already pending."
+          : "You have an incoming friend request from this person. Respond to it first.",
+        409,
+      );
+    const request = {
+      id: id("request_"),
+      fromId: user.id,
+      toId: other.id,
+      type: "friend",
+      reason: "Friend request",
+      status: "pending",
+      requestKnockAccess: flag(p.requestKnockAccess ?? false),
+      grantKnockAccess: flag(p.grantKnockAccess ?? false),
+      roomId: null,
+      resourceId: null,
+      scope: null,
+      createdAt: now(),
+      expiresAt: null,
+    };
+    store.put("request", request, other.id);
+    notify(
+      other.id,
+      "A friend request",
+      `${user.name} would like to be friends${request.requestKnockAccess ? " and asked for permission to knock at your room" : ""}.`,
+    );
+    refresh([user.id, other.id]);
+    return { ok: true, request };
+  };
+  actions["friend.respond"] = (user, p) => {
+    const request = entity(p.requestId, "request");
+    if (
+      request.type !== "friend" ||
+      request.toId !== user.id ||
+      request.status !== "pending"
+    )
+      fail("This friend request cannot be changed.", 403);
+    if (blocked(request.fromId, user.id))
+      fail("This person cannot be added as a friend.", 403);
+    const other = getUser(request.fromId),
+      accept = flag(p.accept),
+      approve = flag(p.grantKnockAccess ?? false);
+    if (accept && other.needsConsent)
+      fail("This account is not ready for friendship.", 403);
+    db.exec("BEGIN");
+    try {
+      if (accept) {
+        store.unlink("knockAccess", user.id, other.id);
+        store.unlink("knockAccess", other.id, user.id);
+        store.link("friend", user.id, other.id);
+        store.link("friend", other.id, user.id);
+        if (request.requestKnockAccess === true && approve)
+          store.link("knockAccess", user.id, other.id);
+        if (request.grantKnockAccess === true)
+          store.link("knockAccess", other.id, user.id);
+      }
+      request.status = accept ? "accepted" : "declined";
+      request.respondedAt = now();
+      request.approvedKnockAccess =
+        accept && request.requestKnockAccess === true && approve;
+      store.put("request", request, user.id);
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+    notify(
+      other.id,
+      accept ? "Friend request accepted" : "Friend request declined",
+      `${user.name} ${accept ? "accepted your friend request" : "declined your friend request"}.`,
+    );
+    refresh([user.id, other.id]);
+    return { ok: true, request };
+  };
+  actions["friend.cancel"] = (user, p) => {
+    const request = entity(p.requestId, "request");
+    if (
+      request.type !== "friend" ||
+      request.fromId !== user.id ||
+      request.status !== "pending"
+    )
+      fail("This friend request cannot be cancelled.", 403);
+    request.status = "cancelled";
+    store.put("request", request, request.toId);
+    refresh([user.id, request.toId]);
+    return { ok: true };
+  };
+  actions["friend.remove"] = (user, p) => {
+    const other = getUser(p.userId);
+    if (user.id === other.id) fail("Choose another person.");
+    removeFriendship(user.id, other.id);
+    refreshAll();
+    return { ok: true };
+  };
+  actions["friend.knock"] = (user, p) => {
+    const other = getUser(p.userId),
+      allow = flag(p.allow);
+    if (!areFriends(user.id, other.id))
+      fail("Only accepted friends can receive room knock permission.", 403);
+    if (allow) store.link("knockAccess", user.id, other.id);
+    else {
+      store.unlink("knockAccess", user.id, other.id);
+      for (const request of store.all("request"))
+        if (
+          request.type === "knock" &&
+          request.toId === user.id &&
+          request.fromId === other.id &&
+          ["pending", "accepted"].includes(request.status)
+        ) {
+          request.status = "cancelled";
+          store.put("request", request, request.toId);
+        }
+    }
+    refresh([user.id, other.id]);
+    return { ok: true };
+  };
   actions["block.toggle"] = (user, p) => {
     getUser(p.userId);
     if (user.id === p.userId) fail("You cannot block yourself.");
-    if (store.has("block", user.id, p.userId))
+    if (store.has("block", user.id, p.userId)) {
+      removeFriendship(user.id, p.userId);
       store.unlink("block", user.id, p.userId);
-    else {
+    } else {
       store.link("block", user.id, p.userId);
+      removeFriendship(user.id, p.userId);
       store.unlink("follow", user.id, p.userId);
       store.unlink("follow", p.userId, user.id);
       store.unlink("closeFriend", user.id, p.userId);
@@ -1668,7 +1926,7 @@ export async function createServer(options = {}) {
     return { ok: true };
   };
   function createVisit(user, p, type) {
-    const other = getUser(p.userId);
+    const other = getUser(type === "knock" ? (p.hostId ?? p.userId) : p.userId);
     if (user.id === other.id || blocked(user.id, other.id))
       fail("This person cannot be contacted.", 403);
     if (other.needsConsent) fail("This account is not ready for visits.", 403);
@@ -1685,13 +1943,10 @@ export async function createServer(options = {}) {
       if (other.id === host.id || blocked(other.id, host.id))
         fail("This person cannot be invited to the host’s room.", 403);
     }
-    if (
-      type === "knock" &&
-      (host.settings.knocks === "nobody" ||
-        (host.settings.knocks === "followers" &&
-          !store.has("follow", guest.id, host.id)))
-    )
-      fail("This person is not accepting knocks from you.", 403);
+    if (!areFriends(host.id, guest.id))
+      fail("Room visits require an accepted friendship with the host.", 403);
+    if (type === "knock" && !knocksAllowed(host.id, guest.id))
+      fail("Your friend has not permitted you to knock at this room.", 403);
     if (
       store
         .all("request")
@@ -1714,12 +1969,15 @@ export async function createServer(options = {}) {
       type,
       reason:
         type === "knock"
-          ? pick(
-              p.reason ?? "Hang out?",
-              ["Hang out?", "Can we talk?", "Create together?"],
-              "knock reason",
-            )
+          ? p.reason === undefined
+            ? "A knock"
+            : pick(
+                p.reason,
+                ["Hang out?", "Can we talk?", "Create together?"],
+                "knock reason",
+              )
           : "You’re invited",
+      message: type === "knock" ? text(p.message ?? "", 160) : undefined,
       status: "pending",
       roomId: room.id,
       sessionId: hostCurrent?.id,
@@ -1740,7 +1998,9 @@ export async function createServer(options = {}) {
     notify(
       other.id,
       type === "knock" ? "A knock at your door" : "A room invitation",
-      `${user.name} ${type === "knock" ? request.reason.toLowerCase() : "invited you to visit their room."}`,
+      type === "knock"
+        ? `${user.name} knocked at your room${request.message ? `: ${request.message}` : "."}`
+        : `${user.name} invited you to visit ${host.id === user.id ? "their" : `${host.name}’s`} room.`,
     );
     if (host.id !== user.id && type === "invite")
       notify(
@@ -1758,7 +2018,7 @@ export async function createServer(options = {}) {
     if (
       request.toId !== user.id ||
       request.status !== "pending" ||
-      request.type === "access"
+      !["knock", "invite"].includes(request.type)
     )
       fail("This request cannot be changed.", 403);
     if (blocked(request.fromId, request.toId))
@@ -1769,6 +2029,14 @@ export async function createServer(options = {}) {
         request.hostId ??
         (request.type === "knock" ? request.toId : request.fromId);
       const host = getUser(hostId);
+      const guestId = request.type === "knock" ? request.fromId : request.toId;
+      if (!areFriends(hostId, guestId))
+        fail(
+          "You must be friends with the host before this visit can be accepted.",
+          403,
+        );
+      if (request.type === "knock" && !knocksAllowed(hostId, guestId))
+        fail("Room knock permission was revoked.", 403);
       if (host.needsConsent) fail("The host account is not ready.", 403);
       let session;
       if (request.type === "invite") {
@@ -1779,6 +2047,14 @@ export async function createServer(options = {}) {
           session.id !== request.sessionId
         )
           fail("The host has ended this invitation.", 409);
+        if (
+          request.fromId !== hostId &&
+          !session.participants.some(
+            (member) =>
+              member.userId === request.fromId && member.permissions.invite,
+          )
+        )
+          fail("The inviter is no longer permitted to invite guests.", 403);
       } else session = hostSession(hostId);
       request.permissions =
         request.type === "knock"
@@ -1808,6 +2084,7 @@ export async function createServer(options = {}) {
     const request = entity(p.requestId, "request");
     if (
       request.fromId !== user.id ||
+      !["knock", "invite"].includes(request.type) ||
       !["pending", "accepted"].includes(request.status)
     )
       fail("This request cannot be cancelled.", 403);
@@ -1827,7 +2104,7 @@ export async function createServer(options = {}) {
     const request = entity(p.requestId, "request");
     if (
       request.status !== "accepted" ||
-      request.type === "access" ||
+      !["knock", "invite"].includes(request.type) ||
       Date.parse(request.expiresAt) <= Date.now()
     )
       fail("This invitation has expired or was not accepted.", 403);
@@ -1837,6 +2114,10 @@ export async function createServer(options = {}) {
         (request.type === "knock" ? request.toId : request.fromId);
     if (user.id !== guestId || blocked(user.id, hostId))
       fail("This invitation belongs to another visitor.", 403);
+    if (!areFriends(hostId, guestId))
+      fail("You are no longer friends with this room’s host.", 403);
+    if (request.type === "knock" && !knocksAllowed(hostId, guestId))
+      fail("Room knock permission was revoked.", 403);
     const hostCurrent = sessionFor(hostId);
     if (
       !hostCurrent ||
@@ -1844,14 +2125,23 @@ export async function createServer(options = {}) {
       hostCurrent.id !== request.sessionId
     )
       fail("The host has ended this room session.", 409);
+    if (
+      request.type === "invite" &&
+      request.fromId !== hostId &&
+      !hostCurrent.participants.some(
+        (member) =>
+          member.userId === request.fromId && member.permissions.invite,
+      )
+    )
+      fail("The inviter is no longer permitted to invite guests.", 403);
     const previous = sessionFor(user.id);
     if (previous && previous.id !== hostCurrent.id)
       fail("Leave your current room session before joining another.", 409);
     if (
-      hostCurrent.participants.length >= 50 &&
+      hostCurrent.participants.length >= 5 &&
       !hostCurrent.participants.some((p) => p.userId === user.id)
     )
-      fail("This room has reached its 50-person limit.", 409);
+      fail("This room has reached its limit of one host and four guests.", 409);
     if (!hostCurrent.participants.some((p) => p.userId === user.id))
       hostCurrent.participants.push({
         userId: user.id,
@@ -2464,17 +2754,10 @@ export async function createServer(options = {}) {
     const userId = user?.id;
     let allowed = userId === upload.ownerId;
     for (const post of store.all("post"))
-      if (
-        post.mediaUrl === upload.url &&
-        (userId ? canReadPost(userId, post) : post.visibility === "public")
-      )
+      if (post.mediaUrl === upload.url && canReadPost(userId, post))
         allowed = true;
-    for (const hall of store.all("hall"))
-      if (
-        hall.artworks.some((a) => a.url === upload.url) &&
-        canReadHall(userId, hall)
-      )
-        allowed = true;
+    // Halls are retired from this iteration. Legacy publication cannot expose
+    // uploaded photos outside the current owner/room-resource boundary.
     for (const resource of store.all("resource"))
       if (
         resource.type === "memories" &&
@@ -2486,7 +2769,9 @@ export async function createServer(options = {}) {
     if (!allowed) return res.status(userId ? 403 : 401).end();
     res.set("Content-Type", upload.mime);
     res.set("Cache-Control", "no-store");
-    res.sendFile(join(mediaDir, upload.filename));
+    // The default private storage is .data/media; explicitly serve authorized
+    // opaque files there instead of Express silently ignoring the hidden parent.
+    res.sendFile(upload.filename, { root: mediaDir, dotfiles: "allow" });
   });
 
   const callPeers = new Map(),

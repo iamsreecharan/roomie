@@ -1,6 +1,6 @@
 # Deploy Roomverse on Render
 
-Roomverse runs as one native Node.js 24 web service. [`render.yaml`](../render.yaml) builds the React app and serves the app, API, authenticated Socket.IO connections, and uploads from the same HTTPS origin. The SQLite database and uploads live together on a persistent disk. This is the deployment shape for the initial 20–50-account pilot; local API load results do not guarantee public-network call or broadcast capacity.
+Roomverse runs as one native Node.js 24 web service. [`render.yaml`](../render.yaml) builds the React app and serves the app, API, authenticated Socket.IO connections, and uploads from the same HTTPS origin. The SQLite database and uploads live together on a persistent disk. This is the deployment shape for the initial 20–50-account pilot; local API load results do not guarantee public-network call capacity.
 
 ## Deploy the Blueprint
 
@@ -11,17 +11,17 @@ Roomverse runs as one native Node.js 24 web service. [`render.yaml`](../render.y
 
 The Blueprint sets:
 
-| Setting | Value |
-| --- | --- |
-| Runtime | Node.js 24 |
-| Instances | 1 |
-| Build | `npm ci --include=dev && npm run build` |
-| Start | `npm start` |
-| Health check | `/api/health` |
-| Persistent disk mount | `/var/data`, 1 GB initially |
-| Database | `DB_PATH=/var/data/roomverse.sqlite` |
-| Uploaded media | `MEDIA_DIR=/var/data/media` |
-| Demo access | `ALLOW_DEMO=false` |
+| Setting               | Value                                   |
+| --------------------- | --------------------------------------- |
+| Runtime               | Node.js 24                              |
+| Instances             | 1                                       |
+| Build                 | `npm ci --include=dev && npm run build` |
+| Start                 | `npm start`                             |
+| Health check          | `/api/health`                           |
+| Persistent disk mount | `/var/data`, 1 GB initially             |
+| Database              | `DB_PATH=/var/data/roomverse.sqlite`    |
+| Uploaded media        | `MEDIA_DIR=/var/data/media`             |
+| Demo access           | `ALLOW_DEMO=false`                      |
 
 Keep the service at **one instance**. Presence, visit sessions, live chat, and media signaling live in that process, and SQLite lives on that service's disk. Horizontal scaling needs a separate database/shared-session architecture. Increase disk capacity before uploads fill it; Render's disk pricing and resizing limits apply.
 
@@ -40,7 +40,7 @@ The server calls `oauth2.googleapis.com` and `openidconnect.googleapis.com`; bro
 
 ## Calls and the Roomie assistant
 
-For reliable browser calls across public networks, add `TURN_URL`, `TURN_USERNAME`, and `TURN_CREDENTIAL` from your TURN provider, then redeploy. Test microphone, camera, and screen sharing from two separate devices/networks on the public HTTPS URL. Private calls currently allow at most six active media participants. A creator broadcasts directly to each audience peer; 20–50 simultaneous video viewers need a managed SFU/broadcast provider and separate media validation.
+For reliable browser calls across public networks, add `TURN_URL`, `TURN_USERNAME`, and `TURN_CREDENTIAL` from your TURN provider, then redeploy. Test microphone, camera, and screen sharing from two separate devices/networks on the public HTTPS URL. Rooms allow a host and four guests. Validate the intended group-call workload separately; 20–50 concurrent accounts do not imply 20–50 simultaneous video streams.
 
 The Blueprint configures **OpenAI** for Roomie. Enter your OpenAI key as `ROOMIE_API_KEY` when Render prompts, or in the service’s **Environment** tab. The default `ROOMIE_MODEL` is `gpt-4.1-mini` and `ROOMIE_API_URL` is `https://api.openai.com/v1/chat/completions`. Keep the key server-side; never put it in a `VITE_` variable, source file, or browser bundle. Without a configured key, Roomie uses its local catalog assistant. OpenAI usage and TURN/media hosting incur separate provider charges. After deployment, check `/api/config` reports `roomieMode: "provider"`, request a room change, review it, and click Apply.
 
@@ -57,14 +57,15 @@ The command uses the service's `DB_PATH`; it should run in the live service shel
 Before inviting pilot users:
 
 - Check `/api/health` and create two real accounts in separate browser profiles.
-- Verify a host accepts a knock, a guest explicitly joins, and denied private resources remain locked.
+- Send and accept a friend request, decide knock permission separately, and verify unauthorized friends cannot knock.
+- Verify a host accepts a permitted knock or invites a friend, the guest explicitly joins, and denied photos/private resources remain locked.
 - Verify chat and a real browser call, then remove the guest and confirm access stops.
 - Upload a small image and check it survives a service restart along with the account and room.
 - If Google is configured, complete a real sign-in on the public origin.
 
 Back up the SQLite database with SQLite's online backup API and copy uploaded media as part of a coordinated backup. Do not copy only the main `.sqlite` file while writes are active: the database uses WAL, and committed changes may be in its sidecar files. Keep encrypted off-service backups and test a restore before relying on the pilot. Disk snapshots alone do not replace tested database/media recovery.
 
-Deploys and restarts end active visits, in-memory chat, attendance, and calls; permanent account/room/resource state and uploads persist on `/var/data`. A disk-mounted service can have deployment downtime; schedule updates around active gatherings. Deleting the service/disk or changing either storage path can lose or hide data. Monitor application errors, memory, disk usage, and call quality during the pilot.
+Deploys and restarts end active visits, in-memory chat, and calls; permanent account/room/resource state and uploads persist on `/var/data`. A disk-mounted service can have deployment downtime; schedule updates around active gatherings. Deleting the service/disk or changing either storage path can lose or hide data. Monitor application errors, memory, disk usage, and call quality during the pilot.
 
 ## Manual web-service setup
 

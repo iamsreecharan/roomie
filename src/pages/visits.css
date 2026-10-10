@@ -1,0 +1,1137 @@
+.vs-page {
+  max-width: 1240px;
+  padding: 34px 38px 52px;
+  margin: auto;
+}
+.vs-page-heading,
+.vs-session-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 25px;
+}
+.vs-page-heading h1,
+.vs-session-heading h1 {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 34px;
+  font-weight: 400;
+  letter-spacing: -1px;
+  line-height: 1.15;
+  margin: 11px 0;
+}
+.vs-page-heading p,
+.vs-session-heading p {
+  font-size: 12px;
+  color: #89907e;
+  margin: 0;
+  line-height: 1.7;
+}
+.vs-session-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.vs-session-actions .button {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.vs-shared-room {
+  max-width: 1240px;
+  margin: auto;
+}
+.vs-page > .vs-shared-room {
+  margin-bottom: 38px;
+}
+.vs-page-heading.has-session {
+  border-top: 1px solid #e5e7dc;
+  padding-top: 31px;
+}
+.vs-page-heading.has-session h1 {
+  font-family: inherit;
+  font-size: 24px;
+  letter-spacing: -0.6px;
+  font-weight: 600;
+}
+.vs-room-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 22px;
+  align-items: start;
+}
+.vs-room-main {
+  min-width: 0;
+}
+.vs-room-scene {
+  border: 1px solid #e5e8dc;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #f3f4eb;
+}
+.vs-room-scene > .room-scene {
+  width: 100%;
+  display: block;
+}
+.vs-room-scene svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.vs-scene-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: #fffdf7;
+  border-top: 1px solid #e7e9dc;
+  padding: 12px 17px;
+}
+.vs-scene-toolbar > span {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 10px;
+  color: #96a285;
+}
+.vs-scene-toolbar .button {
+  font-size: 10px;
+  padding: 6px 9px;
+}
+.vs-people-strip {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 13px 0 17px;
+}
+.vs-people-strip > button {
+  border: 1px solid #e7e9dc;
+  background: #fffdf7;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px 5px 5px;
+  border-radius: 25px;
+  cursor: pointer;
+  color: #6e7b5f;
+  font-size: 10px;
+}
+.vs-people-strip small {
+  font-size: 8px;
+  border-left: 1px solid #e5e8d8;
+  padding-left: 6px;
+  color: #a0ab90;
+}
+.vs-room-tools {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.vs-resource-toggle,
+.vs-call-controls > summary {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  border: 1px solid #e4e8d8;
+  border-radius: 9px;
+  padding: 13px 15px;
+  background: #fffdf7;
+  color: #879575;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  list-style: none;
+}
+.vs-resource-toggle > span,
+.vs-call-controls > summary > span {
+  flex: 1;
+  text-align: left;
+}
+.vs-resource-toggle.active {
+  background: #edf2e4;
+  border-color: #dce5ce;
+}
+.vs-resource-toggle > b {
+  background: #e6edde;
+  border-radius: 6px;
+  font-size: 9px;
+  padding: 3px 6px;
+}
+.vs-call-controls > summary::-webkit-details-marker {
+  display: none;
+}
+.vs-call-controls[open] > summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.vs-call-controls > .rv-media-call {
+  margin: 0;
+  border-top: 0;
+  border-radius: 0 0 9px 9px;
+}
+.vs-resource-panel {
+  margin-top: 15px;
+  padding: 19px 20px;
+  background: #fffdf8;
+  border: 1px solid #e4e9d7;
+  border-radius: 10px;
+  scroll-margin-top: 90px;
+}
+.vs-resource-heading {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  color: #8f9f79;
+}
+.vs-resource-heading h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  color: #6b8055;
+}
+.vs-resource-panel > .muted {
+  font-size: 10px;
+  line-height: 1.75;
+  margin: 11px 0 16px;
+}
+.vs-no-requests {
+  font-size: 11px;
+  color: #a8b394;
+  line-height: 1.7;
+}
+.vs-access-request {
+  display: flex;
+  gap: 11px;
+  border-top: 1px solid #ecf0e1;
+  padding: 15px 0;
+}
+.vs-access-request > div {
+  flex: 1;
+}
+.vs-access-request strong {
+  font-size: 11px;
+  color: #708658;
+  font-weight: 600;
+}
+.vs-access-request p {
+  font-size: 10px;
+  color: #a0af8b;
+  margin: 5px 0 11px;
+}
+.vs-access-actions {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+.vs-access-actions .button {
+  font-size: 9px;
+  padding: 6px 8px;
+}
+.vs-active-grant {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  border-top: 1px solid #e8edde;
+  padding: 13px 0;
+  font-size: 10px;
+  color: #879e6b;
+}
+.vs-active-grant small {
+  display: block;
+  font-size: 8px;
+  margin-top: 5px;
+  color: #a9b795;
+}
+.vs-active-grant .button {
+  font-size: 9px;
+  padding: 6px 8px;
+}
+.vs-open-chat {
+  display: none;
+}
+.vs-chat-panel {
+  position: sticky;
+  top: 88px;
+  display: flex;
+  flex-direction: column;
+  height: 590px;
+  max-height: calc(100dvh - 145px);
+  min-height: 380px;
+  background: #fffdf8;
+  border: 1px solid #e5e9da;
+  border-radius: 13px;
+  overflow: hidden;
+  outline: none;
+}
+.vs-chat-heading {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border-bottom: 1px solid #e9eddf;
+  padding: 17px 16px;
+  background: #f1f4e8;
+  flex-shrink: 0;
+}
+.vs-chat-heading > div {
+  min-width: 0;
+  flex: 1;
+}
+.vs-chat-heading h2 {
+  font-size: 12px;
+  font-weight: 600;
+  margin: 0 0 5px;
+  letter-spacing: -0.2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #61734f;
+}
+.vs-chat-heading span {
+  font-size: 9px;
+  color: #a0af8d;
+}
+.vs-chat-close {
+  display: none;
+}
+.vs-chat-messages {
+  overflow: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 20px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: #dae1cd transparent;
+}
+.vs-chat-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  min-height: 230px;
+  padding: 23px;
+  color: #a5b68d;
+  flex: 1;
+}
+.vs-chat-empty strong {
+  font-size: 13px;
+  font-weight: 550;
+  color: #849b69;
+}
+.vs-chat-empty p {
+  font-size: 10px;
+  line-height: 1.7;
+  color: #b0bd9a;
+  margin: 0;
+  max-width: 210px;
+}
+.vs-chat-message {
+  display: flex;
+  gap: 7px;
+  margin-bottom: 17px;
+  align-items: flex-start;
+}
+.vs-chat-message > .avatar {
+  flex-shrink: 0;
+  margin-top: 15px;
+}
+.vs-chat-message > div {
+  min-width: 0;
+  max-width: calc(100% - 35px);
+}
+.vs-chat-message span {
+  font-size: 8px;
+  color: #a2b18d;
+  display: block;
+  margin-bottom: 5px;
+}
+.vs-chat-message p {
+  background: #edf2e3;
+  border-radius: 0 9px 9px;
+  padding: 10px 12px;
+  line-height: 1.7;
+  font-size: 11px;
+  color: #6e8555;
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.vs-chat-message.mine {
+  flex-direction: row-reverse;
+}
+.vs-chat-message.mine span {
+  text-align: right;
+}
+.vs-chat-message.mine p {
+  background: #e6ebdb;
+  border-radius: 9px 0 9px 9px;
+  color: #617647;
+}
+.vs-chat-compose {
+  border-top: 1px solid #e7ecdc;
+  background: #fffef9;
+  padding: 13px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+.vs-chat-compose input {
+  border: 1px solid #e6ecda;
+  background: #f8faf3;
+  border-radius: 7px;
+  flex: 1;
+  min-width: 0;
+  padding: 11px 10px;
+  font: inherit;
+  font-size: 11px;
+  outline-color: #a6b992;
+  color: #6b8550;
+}
+.vs-chat-compose > button {
+  border: 0;
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  background: #819b65;
+  border-radius: 7px;
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.vs-chat-compose > button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.vs-request-tabs {
+  margin: 0 0 22px !important;
+}
+.vs-request-tabs button {
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.vs-request-tabs button > span {
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 5px;
+  background: #e5eada;
+  font-size: 8px;
+  color: #8aa16e;
+}
+.vs-request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.vs-request {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 21px 22px;
+  border: 1px solid #e5e9d8;
+  border-radius: 11px;
+  background: #fffdf8;
+}
+.vs-request-copy {
+  flex: 1;
+  min-width: 0;
+}
+.vs-request-copy strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: #627951;
+  margin-right: 7px;
+}
+.vs-request-copy > span {
+  font-size: 9px;
+  color: #a2b18e;
+}
+.vs-request-copy p {
+  font-size: 11px;
+  color: #8fa679;
+  margin: 8px 0 6px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.vs-request-copy small {
+  font-size: 8px;
+  color: #b1c09e;
+}
+.vs-request-actions {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.vs-request-actions .button {
+  font-size: 10px;
+  padding: 9px 13px;
+}
+.vs-invite-form {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+}
+.vs-invite-form > .muted {
+  font-size: 12px;
+  margin: 0 0 7px;
+}
+.vs-invite-form > .field {
+  font-size: 11px;
+  margin-bottom: -5px;
+}
+.vs-friend-search {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  padding: 11px 12px;
+  border: 1px solid #dfe7d0;
+  background: #fafcf5;
+  border-radius: 8px;
+  color: #a2b38b;
+}
+.vs-friend-search input {
+  border: 0;
+  background: transparent;
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 12px;
+  color: #748c5c;
+  outline: none;
+}
+.vs-list-label {
+  font-size: 8px;
+  letter-spacing: 1.3px;
+  font-weight: 650;
+  color: #a9b69a;
+  margin-top: 8px;
+}
+.vs-friend-options {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 310px;
+  overflow: auto;
+}
+.vs-friend-options button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  padding: 9px 11px;
+  text-align: left;
+  color: #82996b;
+  cursor: pointer;
+}
+.vs-friend-options button[aria-selected="true"],
+.vs-friend-options button:hover {
+  border-color: #e5ecd9;
+  background: #f1f6e9;
+}
+.vs-friend-options button > span {
+  flex: 1;
+}
+.vs-friend-options strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 550;
+}
+.vs-friend-options small {
+  display: block;
+  font-size: 9px;
+  color: #a8b893;
+  margin-top: 4px;
+}
+.vs-invite-selection {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  border: 1px solid #e2ead5;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f0f5e6;
+}
+.vs-invite-selection > div {
+  flex: 1;
+}
+.vs-invite-selection strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 550;
+  color: #778f5c;
+}
+.vs-invite-selection span {
+  display: block;
+  font-size: 10px;
+  color: #a6b891;
+  margin-top: 4px;
+}
+.vs-invite-form > .button {
+  align-self: flex-start;
+  margin-top: 8px;
+  font-size: 11px;
+}
+.vs-invite-empty {
+  font-size: 11px;
+  color: #a6b890;
+  line-height: 1.7;
+}
+.vs-person-modal {
+  display: flex;
+  gap: 17px;
+  align-items: center;
+  margin-bottom: 23px;
+}
+.vs-person-modal strong {
+  display: block;
+  font-size: 18px;
+  font-weight: 600;
+  color: #708a55;
+}
+.vs-person-modal span {
+  display: block;
+  font-size: 11px;
+  color: #adc199;
+  margin-top: 7px;
+}
+.vs-permissions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0 21px;
+}
+.vs-permissions > label {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  font-size: 12px;
+  color: #809c64;
+  line-height: 1.7;
+}
+.vs-permissions input {
+  accent-color: #84a162;
+}
+.vs-person-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.vs-person-actions .button {
+  font-size: 11px;
+}
+.vs-private-object {
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  padding: 13px 0;
+  border-top: 1px solid #ebf0e0;
+}
+.vs-private-object-icon {
+  width: 35px;
+  height: 37px;
+  display: grid;
+  place-items: center;
+  background: #f0f5e7;
+  border-radius: 7px;
+  color: #9aaf80;
+}
+.vs-private-object > div:nth-child(2) {
+  flex: 1;
+}
+.vs-private-object strong {
+  display: block;
+  font-size: 11px;
+  color: #7f9a65;
+  font-weight: 550;
+}
+.vs-private-object span {
+  display: block;
+  font-size: 9px;
+  color: #b0c19a;
+  margin-top: 5px;
+}
+.vs-private-object > .button {
+  font-size: 9px;
+  padding: 7px 9px;
+}
+.vs-shared-content {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+  color: #718f53;
+  max-height: 65vh;
+  overflow: auto;
+}
+.vs-shared-content > div {
+  border: 1px solid #e7efd9;
+  border-radius: 8px;
+  padding: 15px;
+}
+.vs-shared-content strong {
+  font-size: 13px;
+  font-weight: 550;
+  display: block;
+}
+.vs-shared-content p {
+  font-size: 12px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+}
+.vs-shared-content small,
+.vs-shared-content span {
+  display: block;
+  font-size: 10px;
+  color: #a7bd8c;
+  margin-top: 8px;
+}
+.vs-shared-content a {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #829f61;
+  margin-top: 10px;
+  text-decoration: none;
+}
+.vs-shared-content img {
+  display: block;
+  max-width: 100%;
+  max-height: 50vh;
+  object-fit: contain;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+.vs-shared-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 55vh;
+  overflow: auto;
+  padding-right: 5px;
+}
+.vs-shared-edit-entry {
+  border: 1px solid #e6efd6;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.vs-shared-edit-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #94ac76;
+  font-size: 10px;
+}
+.vs-shared-editor .field {
+  font-size: 10px;
+}
+.vs-shared-task-check {
+  font-size: 11px;
+  color: #99b17b;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+}
+.vs-shared-task-check input {
+  accent-color: #8cab67;
+}
+.vs-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+.vs-owner-roomie {
+  margin: 16px 0;
+}
+.vs-page button:focus-visible,
+.vs-shared-room button:focus-visible {
+  outline: 2px solid #dba086;
+  outline-offset: 3px;
+}
+@media (max-width: 1120px) {
+  .vs-page {
+    padding: 29px 25px 42px;
+  }
+  .vs-room-layout {
+    grid-template-columns: minmax(0, 1fr) 275px;
+    gap: 16px;
+  }
+  .vs-session-heading h1 {
+    font-size: 30px;
+  }
+  .vs-session-actions {
+    gap: 5px;
+  }
+  .vs-session-actions .button {
+    font-size: 10px;
+    padding: 8px 10px;
+  }
+  .vs-request {
+    padding: 19px;
+    gap: 12px;
+  }
+}
+@media (max-width: 930px) {
+  .vs-room-layout {
+    grid-template-columns: 1fr;
+  }
+  .vs-chat-panel {
+    position: static;
+    height: 410px;
+    max-height: none;
+    min-height: 330px;
+  }
+  .vs-session-heading {
+    align-items: flex-start;
+  }
+  .vs-chat-heading {
+    padding: 16px 20px;
+  }
+  .vs-chat-messages {
+    padding: 20px;
+  }
+  .vs-chat-message > div {
+    max-width: 70%;
+  }
+  .vs-chat-compose {
+    padding: 15px 19px;
+  }
+  .vs-request-copy > span {
+    display: block;
+    margin-top: 4px;
+  }
+}
+@media (max-width: 760px) {
+  .vs-page {
+    padding: 24px 18px 38px;
+  }
+  .vs-page-heading h1,
+  .vs-session-heading h1 {
+    font-size: 29px;
+  }
+  .vs-page-heading {
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .vs-page-heading > .button {
+    font-size: 10px;
+    padding: 9px 11px;
+    white-space: nowrap;
+    align-self: center;
+  }
+  .vs-session-heading {
+    display: block;
+    margin-bottom: 21px;
+  }
+  .vs-session-actions {
+    margin-top: 18px;
+    gap: 8px;
+  }
+  .vs-session-actions .button {
+    font-size: 11px;
+    padding: 9px 12px;
+  }
+  .vs-open-chat {
+    display: inline-flex;
+  }
+  .vs-chat-panel {
+    display: none;
+  }
+  .vs-chat-panel.is-mobile-open {
+    display: flex;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    max-height: none;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    z-index: 1000;
+    background: #fafbf4;
+  }
+  .vs-chat-heading {
+    padding: calc(17px + env(safe-area-inset-top)) 20px 17px;
+    background: #edf3e3;
+    gap: 12px;
+  }
+  .vs-chat-heading h2 {
+    font-size: 16px;
+    letter-spacing: -0.3px;
+  }
+  .vs-chat-heading span {
+    font-size: 10px;
+  }
+  .vs-chat-close {
+    display: grid;
+    color: #829968;
+  }
+  .vs-chat-messages {
+    padding: 24px 19px;
+  }
+  .vs-chat-message {
+    gap: 9px;
+    margin-bottom: 21px;
+  }
+  .vs-chat-message > div {
+    max-width: 78%;
+  }
+  .vs-chat-message span {
+    font-size: 9px;
+    margin-bottom: 6px;
+  }
+  .vs-chat-message p {
+    font-size: 13px;
+    padding: 11px 14px;
+  }
+  .vs-chat-empty {
+    min-height: 50dvh;
+    gap: 16px;
+  }
+  .vs-chat-empty strong {
+    font-size: 17px;
+  }
+  .vs-chat-empty p {
+    font-size: 12px;
+    max-width: 220px;
+  }
+  .vs-chat-compose {
+    padding: 14px 17px calc(14px + env(safe-area-inset-bottom));
+    background: #f7faef;
+    gap: 10px;
+  }
+  .vs-chat-compose input {
+    font-size: 16px;
+    padding: 13px 12px;
+  }
+  .vs-chat-compose > button {
+    width: 42px;
+    height: 42px;
+  }
+  .vs-people-strip {
+    gap: 6px;
+    margin: 12px 0 17px;
+  }
+  .vs-people-strip > button {
+    font-size: 9px;
+    padding: 5px 9px 5px 5px;
+    gap: 6px;
+  }
+  .vs-people-strip small {
+    font-size: 7px;
+  }
+  .vs-scene-toolbar {
+    padding: 11px 13px;
+  }
+  .vs-scene-toolbar > span {
+    font-size: 9px;
+  }
+  .vs-scene-toolbar .button {
+    font-size: 9px;
+  }
+  .vs-resource-toggle,
+  .vs-call-controls > summary {
+    padding: 13px 14px;
+    font-size: 11px;
+  }
+  .vs-resource-panel {
+    padding: 19px 17px;
+  }
+  .vs-resource-heading h2 {
+    font-size: 12px;
+  }
+  .vs-resource-panel > .muted {
+    font-size: 10px;
+  }
+  .vs-request {
+    padding: 18px 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .vs-request > .avatar {
+    align-self: flex-start;
+  }
+  .vs-request-copy {
+    min-width: 200px;
+  }
+  .vs-request-copy strong {
+    font-size: 13px;
+  }
+  .vs-request-copy p {
+    font-size: 11px;
+  }
+  .vs-request-actions {
+    margin-left: 60px;
+    gap: 9px;
+  }
+  .vs-request-actions .button {
+    font-size: 11px;
+    padding: 9px 15px;
+  }
+  .vs-page-heading.has-session {
+    padding-top: 27px;
+  }
+  .vs-request-tabs {
+    overflow: auto;
+    flex-wrap: nowrap !important;
+  }
+  .vs-request-tabs button {
+    white-space: nowrap;
+    font-size: 10px;
+  }
+  .vs-private-object {
+    gap: 9px;
+  }
+  .vs-private-object-icon {
+    width: 30px;
+    height: 34px;
+  }
+  .vs-private-object strong {
+    font-size: 10px;
+  }
+  .vs-private-object span {
+    font-size: 8px;
+  }
+  .vs-private-object > .button {
+    font-size: 8px;
+    padding: 7px 8px;
+  }
+  .vs-active-grant {
+    font-size: 9px;
+  }
+  .vs-access-actions .button {
+    font-size: 8px;
+    padding: 6px 7px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vs-page *,
+  .vs-shared-room * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}
+
+/* Shared rooms use the same typography and comfortable touch controls. */
+.vs-session-heading h1,
+.vs-page-heading h1 {
+  font-family: "Manrope", "DM Sans", sans-serif;
+  letter-spacing: -0.045em;
+}
+.vs-session-actions .button {
+  min-height: 44px;
+}
+.vs-resource-toggle,
+.vs-call-controls > summary {
+  min-height: 48px;
+  font-size: 13px;
+}
+.vs-private-object strong {
+  font-size: 13px;
+}
+.vs-private-object span {
+  font-size: 11px;
+}
+.vs-private-object > .button {
+  font-size: 12px;
+  min-height: 42px;
+}
+@media (max-width: 760px) {
+  .vs-session-heading p {
+    font-size: 13px;
+  }
+  .vs-session-actions .button {
+    font-size: 12px;
+  }
+  .vs-people-strip > button {
+    font-size: 12px;
+    padding: 7px 12px 7px 6px;
+  }
+  .vs-private-object strong {
+    font-size: 13px;
+  }
+  .vs-private-object span {
+    font-size: 11px;
+  }
+  .vs-private-object > .button {
+    font-size: 11px;
+  }
+  .vs-request-copy p {
+    font-size: 13px;
+  }
+  .vs-access-actions .button {
+    font-size: 11px;
+    min-height: 42px;
+  }
+}
+.vs-shared-photo {
+  display: block;
+  width: 100%;
+  max-height: 65dvh;
+  object-fit: contain;
+  background: #f4eee5;
+  border-radius: 15px;
+  margin-top: 12px;
+}
+.vs-shared-photo[hidden] {
+  display: none;
+}
+.vs-private-tools {
+  margin: 24px 0;
+}
+.vs-private-tools h2 {
+  font-size: 16px;
+  margin-bottom: 13px;
+}
+.vs-private-tools > div {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+.vs-private-tools button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #e4dcd3;
+  background: #fffdf9;
+  border-radius: 14px;
+  padding: 14px 12px;
+  font-size: 12px;
+  text-align: left;
+}
+.vs-private-tools button svg {
+  color: #9b7b6c;
+}
+.vs-private-tools button svg:last-child {
+  margin-left: auto;
+}
+.vs-person-profile {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0;
+}
+.vs-person-profile p {
+  margin: 0;
+}
+@media (max-width: 760px) {
+  .vs-private-tools > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .vs-private-tools button {
+    min-height: 48px;
+  }
+}

@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { once } from "node:events";
 import { io as connectSocket } from "socket.io-client";
 import { createServer } from "../server/index.js";
+import { migrateFriendWorkflow } from "../server/store.js";
 
 const PASSWORD = "Roomverse-test-password-42";
 const permissions = {
@@ -20,11 +21,12 @@ let serial = 0;
 async function fixture(t, options = {}) {
   const directory = await mkdtemp(join(tmpdir(), "roomverse-test-"));
   const dbPath = join(directory, "roomverse.sqlite");
+  const { hiddenMedia = false, ...serverOptions } = options;
   const instance = await createServer({
     dbPath,
-    mediaDir: join(directory, "media"),
+    mediaDir: join(directory, hiddenMedia ? ".private-media" : "media"),
     allowDemo: true,
-    ...options,
+    ...serverOptions,
   });
   const server = instance.httpServer || instance.server;
   server.listen(0, "127.0.0.1");
@@ -127,8 +129,35 @@ async function fixture(t, options = {}) {
     return user;
   }
 
+  async function befriend(host, guest, allowKnocks = false) {
+    const existing = (await guest.boot()).users.find(
+      (item) => item.id === host.id,
+    );
+    if (!existing?.isFriend) {
+      await guest.act("friend.request", {
+        userId: host.id,
+        requestKnockAccess: allowKnocks,
+        grantKnockAccess: false,
+      });
+      const request = (await host.boot()).requests.find(
+        (item) =>
+          item.type === "friend" &&
+          item.fromId === guest.id &&
+          item.status === "pending",
+      );
+      assert.ok(request, "Recipient should receive the friendship request");
+      await host.act("friend.respond", {
+        requestId: request.id,
+        accept: true,
+        grantKnockAccess: allowKnocks,
+      });
+    } else if (allowKnocks)
+      await host.act("friend.knock", { userId: guest.id, allow: true });
+  }
+
   async function admit(host, guest, selectedPermissions = permissions) {
-    await guest.act("knock.create", { userId: host.id, reason: "Hang out?" });
+    await befriend(host, guest, true);
+    await guest.act("knock.create", { hostId: host.id, message: "Hello!" });
     const request = (await host.boot()).requests.find(
       (item) =>
         item.fromId === guest.id &&
@@ -145,7 +174,16 @@ async function fixture(t, options = {}) {
     return request;
   }
 
-  return { ...instance, baseURL, directory, dbPath, client, account, admit };
+  return {
+    ...instance,
+    baseURL,
+    directory,
+    dbPath,
+    client,
+    account,
+    admit,
+    befriend,
+  };
 }
 
 function denied(result, message = "Unauthorized operation should be denied") {
@@ -309,7 +347,7 @@ test("Google-style accounts cannot activate without a finite adult age and expli
   await user.act("profile.update", { name: "Activated with consent" });
 });
 
-test("public profiles and follows never disclose private resources or grant room access", async (t) => {
+test("accepted friendships never disclose private resources or automatically grant knocking or admission", async (t) => {
   const f = await fixture(t);
   const host = await f.account("privacy");
   const guest = await f.account("follower");
@@ -323,11 +361,16 @@ test("public profiles and follows never disclose private resources or grant room
       { id: "entry", title: "Secret", text: secret, date: "2026-10-09" },
     ],
   });
-  await guest.act("follow.toggle", { userId: host.id });
+  await f.befriend(host, guest);
   const bootstrap = await guest.boot();
-  assert.equal(
-    bootstrap.users.find((item) => item.id === host.id).following,
-    true,
+  const friend = bootstrap.users.find((item) => item.id === host.id);
+  assert.equal(friend.isFriend, true);
+  assert.equal(friend.canKnock, false);
+  denied(
+    await guest.request("/api/action", {
+      type: "knock.create",
+      hostId: host.id,
+    }),
   );
   assert.equal(bootstrap.session, null);
   assert.ok(bootstrap.resources.every((item) => item.id !== resource.id));
@@ -347,6 +390,337 @@ test("public profiles and follows never disclose private resources or grant room
       scope: "read",
     }),
   );
+});
+
+test("friend requests require recipient approval and explicit requested knock grants", async (t) => {
+  const f = await fixture(t);
+  const sender = await f.account("friendrequester");
+  const recipient = await f.account("friendrecipient");
+  const stranger = await f.account("friendstranger");
+  denied(
+    await sender.request("/api/action", {
+      type: "knock.create",
+      hostId: recipient.id,
+    }),
+  );
+  denied(
+    await sender.request("/api/action", {
+      type: "invite.create",
+      userId: recipient.id,
+    }),
+  );
+  await sender.act("friend.request", {
+    userId: recipient.id,
+    requestKnockAccess: true,
+    grantKnockAccess: true,
+  });
+  const request = (await recipient.boot()).requests.find(
+    (item) =>
+      item.type === "friend" &&
+      item.fromId === sender.id &&
+      item.status === "pending",
+  );
+  assert.ok(request);
+  assert.equal(
+    (await sender.boot()).users.find((item) => item.id === recipient.id)
+      .friendshipStatus,
+    "outgoing",
+  );
+  assert.equal(
+    (await recipient.boot()).users.find((item) => item.id === sender.id)
+      .friendshipStatus,
+    "incoming",
+  );
+  denied(
+    await sender.request("/api/action", {
+      type: "friend.respond",
+      requestId: request.id,
+      accept: true,
+      grantKnockAccess: true,
+    }),
+  );
+  denied(
+    await stranger.request("/api/action", {
+      type: "friend.respond",
+      requestId: request.id,
+      accept: true,
+      grantKnockAccess: true,
+    }),
+  );
+  denied(
+    await recipient.request("/api/action", {
+      type: "friend.request",
+      userId: sender.id,
+    }),
+  );
+  await recipient.act("friend.respond", {
+    requestId: request.id,
+    accept: true,
+    grantKnockAccess: false,
+  });
+  const atSender = (await sender.boot()).users.find(
+    (item) => item.id === recipient.id,
+  );
+  const atRecipient = (await recipient.boot()).users.find(
+    (item) => item.id === sender.id,
+  );
+  assert.equal(atSender.isFriend, true);
+  assert.equal(atRecipient.isFriend, true);
+  assert.equal(
+    atSender.canKnock,
+    false,
+    "Requested access must still need recipient approval",
+  );
+  assert.equal(
+    atRecipient.canKnock,
+    true,
+    "Sender offered access applies only after accepted friendship",
+  );
+  denied(
+    await sender.request("/api/action", {
+      type: "knock.create",
+      hostId: recipient.id,
+    }),
+  );
+  await recipient.act("friend.knock", { userId: sender.id, allow: true });
+  await sender.act("knock.create", {
+    hostId: recipient.id,
+    message: "Tea in ten minutes?",
+  });
+  const knock = (await recipient.boot()).requests.find(
+    (item) =>
+      item.type === "knock" &&
+      item.fromId === sender.id &&
+      item.status === "pending",
+  );
+  assert.equal(knock.message, "Tea in ten minutes?");
+  denied(
+    await stranger.request("/api/action", {
+      type: "friend.knock",
+      userId: sender.id,
+      allow: true,
+    }),
+  );
+});
+
+test("rejection and cancellation never grant friendship or the offered knock permission", async (t) => {
+  const f = await fixture(t);
+  const sender = await f.account("rejectsender");
+  const recipient = await f.account("rejectrecipient");
+  await sender.act("friend.request", {
+    userId: recipient.id,
+    requestKnockAccess: true,
+    grantKnockAccess: true,
+  });
+  const request = (await recipient.boot()).requests.find(
+    (item) =>
+      item.type === "friend" &&
+      item.fromId === sender.id &&
+      item.status === "pending",
+  );
+  await recipient.act("friend.respond", {
+    requestId: request.id,
+    accept: false,
+    grantKnockAccess: true,
+  });
+  const profile = (await sender.boot()).users.find(
+    (item) => item.id === recipient.id,
+  );
+  assert.equal(profile.isFriend, false);
+  assert.equal(profile.canKnock, false);
+  assert.equal(profile.canKnockAtMine, false);
+  denied(
+    await sender.request("/api/action", {
+      type: "knock.create",
+      hostId: recipient.id,
+    }),
+  );
+  const second = await f.account("cancelfriend");
+  await sender.act("friend.request", {
+    userId: second.id,
+    grantKnockAccess: true,
+  });
+  const pending = (await second.boot()).requests.find(
+    (item) =>
+      item.type === "friend" &&
+      item.fromId === sender.id &&
+      item.status === "pending",
+  );
+  denied(
+    await second.request("/api/action", {
+      type: "friend.cancel",
+      requestId: pending.id,
+    }),
+  );
+  await sender.act("friend.cancel", { requestId: pending.id });
+  denied(
+    await second.request("/api/action", {
+      type: "friend.respond",
+      requestId: pending.id,
+      accept: true,
+      grantKnockAccess: true,
+    }),
+  );
+});
+
+test("friend-request permission flags default off and recipients cannot approve unrequested knocking", async (t) => {
+  const f = await fixture(t);
+  const sender = await f.account("defaultfriend");
+  const recipient = await f.account("defaultpeer");
+  await sender.act("friend.request", { userId: recipient.id });
+  const request = (await recipient.boot()).requests.find(
+    (item) =>
+      item.type === "friend" &&
+      item.fromId === sender.id &&
+      item.status === "pending",
+  );
+  await recipient.act("friend.respond", {
+    requestId: request.id,
+    accept: true,
+    grantKnockAccess: true,
+  });
+  const senderView = (await sender.boot()).users.find(
+    (item) => item.id === recipient.id,
+  );
+  const recipientView = (await recipient.boot()).users.find(
+    (item) => item.id === sender.id,
+  );
+  assert.equal(senderView.canKnock, false);
+  assert.equal(senderView.canKnockAtMine, false);
+  assert.equal(recipientView.canKnock, false);
+  denied(
+    await sender.request("/api/action", {
+      type: "knock.create",
+      hostId: recipient.id,
+    }),
+  );
+});
+
+test("knock revocation invalidates pending knocks and short messages have a 160-character limit", async (t) => {
+  const f = await fixture(t);
+  const host = await f.account("knockowner");
+  const guest = await f.account("knockfriend");
+  await f.befriend(host, guest, true);
+  denied(
+    await guest.request("/api/action", {
+      type: "knock.create",
+      hostId: host.id,
+      message: "x".repeat(161),
+    }),
+  );
+  await guest.act("knock.create", { hostId: host.id, message: "" });
+  const request = (await host.boot()).requests.find(
+    (item) =>
+      item.type === "knock" &&
+      item.fromId === guest.id &&
+      item.status === "pending",
+  );
+  await host.act("friend.knock", { userId: guest.id, allow: false });
+  denied(
+    await host.request("/api/action", {
+      type: "request.respond",
+      requestId: request.id,
+      accept: true,
+      permissions,
+    }),
+  );
+  denied(
+    await guest.request("/api/action", {
+      type: "knock.create",
+      hostId: host.id,
+      message: "Hello",
+    }),
+  );
+});
+
+test("unfriending revokes active admission, private grants and both knock permissions", async (t) => {
+  const f = await fixture(t);
+  const host = await f.account("unfriendhost");
+  const guest = await f.account("unfriendguest");
+  const admission = await f.admit(host, guest);
+  await guest.act("friend.knock", { userId: host.id, allow: true });
+  const resource = (await host.boot()).resources.find(
+    (item) => item.type === "journal",
+  );
+  await guest.act("resource.request", {
+    resourceId: resource.id,
+    scope: "read",
+  });
+  const request = (await host.boot()).requests.find(
+    (item) =>
+      item.type === "access" &&
+      item.fromId === guest.id &&
+      item.resourceId === resource.id,
+  );
+  await host.act("resource.grant", { requestId: request.id, scope: "read" });
+  await guest.ok(`/api/resources/${resource.id}`);
+  await guest.act("friend.remove", { userId: host.id });
+  assert.equal((await guest.boot()).session, null);
+  const profile = (await guest.boot()).users.find(
+    (item) => item.id === host.id,
+  );
+  assert.equal(profile.isFriend, false);
+  assert.equal(profile.canKnock, false);
+  assert.equal(profile.canKnockAtMine, false);
+  denied(await guest.request(`/api/resources/${resource.id}`));
+  denied(
+    await guest.request("/api/action", {
+      type: "session.join",
+      requestId: admission.id,
+    }),
+  );
+  denied(
+    await guest.request("/api/action", {
+      type: "knock.create",
+      hostId: host.id,
+    }),
+  );
+  denied(
+    await host.request("/api/action", {
+      type: "invite.create",
+      userId: guest.id,
+    }),
+  );
+});
+
+test("a room admits its host and four friends but denies a sixth participant", async (t) => {
+  const f = await fixture(t);
+  const host = await f.account("capacityhost");
+  assert.deepEqual(
+    (await host.boot()).room.objects.map((item) => item.type),
+    ["bed"],
+  );
+  const guests = [];
+  for (let index = 0; index < 4; index += 1) {
+    const guest = await f.account("capacityguest");
+    guests.push(guest);
+    await f.admit(host, guest);
+  }
+  const overflow = await f.account("overflowguest");
+  await f.befriend(host, overflow, true);
+  await overflow.act("knock.create", { hostId: host.id });
+  const request = (await host.boot()).requests.find(
+    (item) =>
+      item.type === "knock" &&
+      item.fromId === overflow.id &&
+      item.status === "pending",
+  );
+  const accepted = await host.request("/api/action", {
+    type: "request.respond",
+    requestId: request.id,
+    accept: true,
+    permissions,
+  });
+  if (accepted.status === 200)
+    denied(
+      await overflow.request("/api/action", {
+        type: "session.join",
+        requestId: request.id,
+      }),
+    );
+  else denied(accepted);
+  assert.equal((await host.boot()).session.participants.length, 5);
+  assert.equal((await overflow.boot()).session, null);
 });
 
 test("contact matching requires reciprocal consent and respects discovery and blocks without returning emails", async (t) => {
@@ -408,7 +782,8 @@ test("knock acceptance authorizes only a voluntary join and room visuals remain 
       { id: "sensitive", text: "PRIVATE-INTERVIEW-SCHEDULE", done: false },
     ],
   });
-  await guest.act("knock.create", { userId: host.id, reason: "Can we talk?" });
+  await f.befriend(host, guest, true);
+  await guest.act("knock.create", { hostId: host.id, message: "Can we talk?" });
   const request = (await host.boot()).requests.find(
     (item) => item.fromId === guest.id && item.type === "knock",
   );
@@ -452,6 +827,7 @@ test("invites need invitee consent and an explicit join; declined invites cannot
   const f = await fixture(t);
   const host = await f.account("inviter");
   const guest = await f.account("invitee");
+  await f.befriend(host, guest);
   await host.act("invite.create", { userId: guest.id });
   const request = (await guest.boot()).requests.find(
     (item) => item.type === "invite" && item.fromId === host.id,
@@ -467,6 +843,7 @@ test("invites need invitee consent and an explicit join; declined invites cannot
   await guest.act("session.join", { requestId: request.id });
   await guest.act("session.leave");
   const second = await f.account("decliner");
+  await f.befriend(host, second);
   await host.act("invite.create", { userId: second.id });
   const declined = (await second.boot()).requests.find(
     (item) => item.type === "invite" && item.fromId === host.id,
@@ -489,6 +866,7 @@ test("guest invitations require host permission and invitees cannot escalate gra
   const guest = await f.account("guestinviter");
   const third = await f.account("guestinvitee");
   await f.admit(host, guest);
+  await f.befriend(host, third);
   denied(
     await guest.request("/api/action", {
       type: "invite.create",
@@ -650,24 +1028,23 @@ test("read-once access closes explicitly and removing a participant immediately 
   );
 });
 
-test("blocking removes interaction rights, follow edges and current admission", async (t) => {
+test("blocking removes friendship, knock permissions and current admission", async (t) => {
   const f = await fixture(t);
   const host = await f.account("blockowner");
   const guest = await f.account("blocked");
-  await guest.act("follow.toggle", { userId: host.id });
   await f.admit(host, guest);
   await host.act("block.toggle", { userId: guest.id });
   assert.equal((await guest.boot()).session, null);
   denied(
     await guest.request("/api/action", {
       type: "knock.create",
-      userId: host.id,
+      hostId: host.id,
       reason: "Hang out?",
     }),
   );
   denied(
     await guest.request("/api/action", {
-      type: "follow.toggle",
+      type: "friend.request",
       userId: host.id,
     }),
   );
@@ -1010,13 +1387,11 @@ test("uploads reject active content and forged MIME types; accepted media uses s
   const f = await fixture(t);
   const user = await f.account("uploader");
   denied(
-    await f
-      .client()
-      .request("/api/upload", {
-        dataUrl: "data:image/png;base64,aGVsbG8=",
-        kind: "photo",
-        name: "test.png",
-      }),
+    await f.client().request("/api/upload", {
+      dataUrl: "data:image/png;base64,aGVsbG8=",
+      kind: "photo",
+      name: "test.png",
+    }),
   );
   const svg = Buffer.from(
     '<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"></svg>',
@@ -1068,7 +1443,7 @@ test("uploads reject active content and forged MIME types; accepted media uses s
 });
 
 test("private memory media follows resource grants and cannot be republished by another account", async (t) => {
-  const f = await fixture(t);
+  const f = await fixture(t, { hiddenMedia: true });
   const owner = await f.account("memoryowner");
   const guest = await f.account("memoryguest");
   const png =
@@ -1078,6 +1453,33 @@ test("private memory media follows resource grants and cannot be republished by 
     kind: "photo",
     name: "Private memory.png",
   });
+  await owner.act("post.create", {
+    caption: "Archived public declaration must not expose this photo",
+    mediaType: "photo",
+    mediaUrl: upload.url,
+    variant: "sunset",
+    visibility: "public",
+  });
+  f.store.put(
+    "hall",
+    {
+      id: "legacy-photo-hall",
+      ownerId: owner.id,
+      title: "Legacy archive",
+      description: "",
+      cover: "bloom",
+      theme: "sage",
+      published: true,
+      access: "public",
+      artworks: [{ id: "legacy-photo", url: upload.url }],
+      events: [],
+    },
+    owner.id,
+  );
+  denied(
+    await f.client().request(upload.url),
+    "Retired hall publication does not make host photos public",
+  );
   const resource = (await owner.boot()).resources.find(
     (item) => item.type === "memories",
   );
@@ -1097,6 +1499,13 @@ test("private memory media follows resource grants and cannot be republished by 
     }),
   );
   await f.admit(owner, guest);
+  assert.ok(
+    !(await guest.boot()).posts.some((item) => item.authorId === owner.id),
+  );
+  denied(
+    await guest.request(upload.url),
+    "Admission does not disclose private photo content",
+  );
   await guest.act("resource.request", {
     resourceId: resource.id,
     scope: "read",
@@ -1122,7 +1531,7 @@ test("private memory media follows resource grants and cannot be republished by 
   denied(await guest.request(upload.url));
 });
 
-test("posts enforce visibility and author ownership; account deletion revokes sessions", async (t) => {
+test("archived posts stay owner-only after friendship and account deletion revokes sessions", async (t) => {
   const f = await fixture(t);
   const owner = await f.account("postauthor");
   const visitor = await f.account("postvisitor");
@@ -1137,8 +1546,8 @@ test("posts enforce visibility and author ownership; account deletion revokes se
   );
   assert.ok(post);
   assert.ok(!(await visitor.boot()).posts.some((item) => item.id === post.id));
-  await visitor.act("follow.toggle", { userId: owner.id });
-  assert.ok((await visitor.boot()).posts.some((item) => item.id === post.id));
+  await f.befriend(owner, visitor, true);
+  assert.ok(!(await visitor.boot()).posts.some((item) => item.id === post.id));
   denied(
     await visitor.request("/api/action", {
       type: "post.delete",
@@ -1153,4 +1562,92 @@ test("posts enforce visibility and author ownership; account deletion revokes se
   );
   await visitor.act("account.delete", { password: PASSWORD });
   denied(await visitor.request("/api/bootstrap"));
+});
+
+test("friend permissions and customized rooms persist across restart without promoting legacy follows", async (t) => {
+  const f = await fixture(t);
+  const host = await f.account("persistowner");
+  const guest = await f.account("persistfriend");
+  const stranger = await f.account("persistfollow");
+  await f.befriend(host, guest, true);
+  await stranger.act("follow.toggle", { userId: host.id });
+  const room = (await host.boot()).room;
+  const objects = [
+    ...room.objects,
+    {
+      id: "custom-plant",
+      type: "plant",
+      x: 20,
+      y: 40,
+      rotation: 0,
+      color: "#718f68",
+    },
+  ];
+  await host.act("room.update", { version: room.version, objects });
+  f.store.put(
+    "request",
+    {
+      id: "legacy-knock",
+      type: "knock",
+      fromId: stranger.id,
+      toId: host.id,
+      status: "pending",
+      hostId: host.id,
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 60000).toISOString(),
+    },
+    host.id,
+  );
+  await f.close();
+  const restarted = await createServer({
+    dbPath: f.dbPath,
+    mediaDir: join(f.directory, "media"),
+    allowDemo: false,
+  });
+  t.after(() => restarted.close());
+  assert.equal(restarted.store.has("friend", host.id, guest.id), true);
+  assert.equal(restarted.store.has("friend", guest.id, host.id), true);
+  assert.equal(restarted.store.has("knockAccess", host.id, guest.id), true);
+  assert.equal(restarted.store.has("friend", host.id, stranger.id), false);
+  assert.deepEqual(restarted.store.get(room.id).objects, objects);
+  assert.equal(restarted.store.get("legacy-knock").status, "cancelled");
+});
+
+test("only the untouched legacy starter layout becomes a bed-only room", async (t) => {
+  const f = await fixture(t);
+  const owner = await f.account("legacyroom");
+  const customOwner = await f.account("customroom");
+  const template = [
+    ["rug", 48, 70, "#eed2b0"],
+    ["sofa", 39, 53, "#c97659"],
+    ["plant", 76, 52, "#718f68"],
+    ["desk", 70, 59, "#b89873"],
+    ["lamp", 27, 49, "#e6c99f"],
+    ["art", 63, 31, "#d7a181"],
+    ["shelf", 20, 46, "#aa8966"],
+    ["table", 44, 65, "#c4aa85"],
+  ];
+  const original = f.store.get((await owner.boot()).room.id);
+  original.objects = template.map(([type, x, y, color], index) => ({
+    id: `old_${index}`,
+    type,
+    x,
+    y,
+    color,
+    rotation: 0,
+  }));
+  f.store.put("room", original, owner.id);
+  const custom = f.store.get((await customOwner.boot()).room.id);
+  custom.objects = structuredClone(original.objects);
+  custom.objects[0].x = 49;
+  f.store.put("room", custom, customOwner.id);
+  migrateFriendWorkflow(f.store);
+  assert.deepEqual(
+    f.store.get(original.id).objects.map((object) => object.type),
+    ["bed"],
+  );
+  assert.deepEqual(f.store.get(custom.id).objects, custom.objects);
+  assert.equal(f.store.get(original.id).version, 2);
+  migrateFriendWorkflow(f.store);
+  assert.equal(f.store.get(original.id).version, 2, "Migration is idempotent");
 });

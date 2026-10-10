@@ -38,50 +38,51 @@ import {
   X,
 } from "lucide-react";
 import { Avatar, Badge, Button, Empty, Modal } from "../lib.jsx";
-import { avatarOptions } from "../components/Avatar.jsx";
+import { avatarOptions, avatarStyles } from "../components/Avatar.jsx";
 import RoomScene, { roomObjectDefaults } from "../components/RoomScene.jsx";
+import { SharedRoom } from "./Visits.jsx";
 import "./room.css";
 
 const themes = [
-  { id: "sage", name: "Sunday sage", color: "#b5c9b9" },
-  { id: "clay", name: "Warm terracotta", color: "#d5ac96" },
-  { id: "lavender", name: "Lavender hour", color: "#bdb2d0" },
-  { id: "midnight", name: "After hours", color: "#5d6e7d" },
+  { id: "sage", name: "Sage", color: "#b5c9b9" },
+  { id: "clay", name: "Terracotta", color: "#d5ac96" },
+  { id: "lavender", name: "Lavender", color: "#bdb2d0" },
+  { id: "midnight", name: "Midnight", color: "#5d6e7d" },
 ];
 const toolInfo = {
   tasks: {
-    label: "Little to-dos",
+    label: "Tasks",
     title: "Tasks",
     icon: CheckCheck,
-    subtitle: "Make room for the things that matter.",
+    subtitle: "A private task list.",
     color: "sage",
   },
   journal: {
-    label: "Dear diary",
+    label: "Journal",
     title: "Journal",
     icon: BookOpen,
-    subtitle: "A soft landing for your thoughts.",
+    subtitle: "Notes and journal entries.",
     color: "peach",
   },
   planner: {
-    label: "Your days",
+    label: "Calendar",
     title: "Calendar",
     icon: CalendarDays,
-    subtitle: "A little intention for the days ahead.",
+    subtitle: "Keep track of your plans.",
     color: "lavender",
   },
   memories: {
-    label: "Good little moments",
+    label: "Memories",
     title: "Memories",
     icon: Image,
-    subtitle: "Some moments deserve a place to stay.",
+    subtitle: "Save photos and memories.",
     color: "sand",
   },
   whiteboard: {
-    label: "Room to think",
+    label: "Whiteboard",
     title: "Whiteboard",
     icon: StickyNote,
-    subtitle: "Let your ideas wander a little.",
+    subtitle: "A private space for ideas.",
     color: "blue",
   },
 };
@@ -101,7 +102,7 @@ export function RoomiePanel({ data, act, toast, navigate, compact = false }) {
   const [previewVersion, setPreviewVersion] = useState(null);
   async function preview(event, text = prompt) {
     event?.preventDefault();
-    if (!text.trim()) return;
+    if (!text.trim() || busy) return;
     setBusy(true);
     setProposal(null);
     try {
@@ -126,10 +127,10 @@ export function RoomiePanel({ data, act, toast, navigate, compact = false }) {
       setPrompt("");
       toast(
         proposal.action === "host"
-          ? "Your room is open for a little company."
+          ? "Room opened. Choose friends to invite."
           : proposal.action === "open_resource"
-            ? "Your private corner is ready."
-            : "A little refresh, just for you.",
+            ? "Private tool opened."
+            : "Changes saved.",
       );
       if (result.navigate && navigate)
         navigate(result.navigate, result.resourceType);
@@ -139,6 +140,21 @@ export function RoomiePanel({ data, act, toast, navigate, compact = false }) {
       setBusy(false);
     }
   }
+  const suggestions =
+    data.room.objects.length < 3
+      ? [
+          { label: "Add a plant", prompt: "Add a plant" },
+          { label: "Add a sofa", prompt: "Add a sofa" },
+          { label: "Add a desk", prompt: "Add a desk" },
+        ]
+      : [
+          {
+            label: "Warm lighting",
+            prompt: "Add a lamp and make the room warm",
+          },
+          { label: "Lavender", prompt: "A lavender mood" },
+          { label: "Add a task", prompt: "Add a task: Take a mindful break" },
+        ];
   return (
     <section
       className={`roomie-panel ${compact ? "roomie-compact" : ""}`}
@@ -146,57 +162,39 @@ export function RoomiePanel({ data, act, toast, navigate, compact = false }) {
     >
       <div className="roomie-heading">
         <span className="roomie-mark">
-          <Sparkles size={22} />
+          <Sparkles size={21} />
         </span>
         <div>
-          <h3>A little help from Roomie</h3>
-          <p>Your space, with a touch of magic.</p>
+          <h2>Roomie</h2>
+          <p>Tell Roomie what you want to change.</p>
         </div>
-        <span className="roomie-dot" title="Ready to help" />
       </div>
-      {!compact && (
-        <p className="roomie-intro">
-          A new mood, a fresh arrangement, or a little plan for your day. Just
-          say the word.
-        </p>
-      )}
       <form className="roomie-input" onSubmit={preview}>
+        <label htmlFor="roomie-prompt">What would you like in your room?</label>
         <textarea
+          id="roomie-prompt"
           aria-label="Ask Roomie"
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
-          placeholder="Make my room feel a little cozier…"
+          placeholder="Add a cozy sofa, a plant, and warm lighting…"
           maxLength={500}
-          rows={compact ? 2 : 3}
+          rows={3}
         />
-        <button
-          className="roomie-send"
-          type="submit"
-          aria-label="Preview Roomie's suggestion"
-          disabled={busy || !prompt.trim()}
-        >
-          {busy ? <span className="room-spinner" /> : <ArrowUp size={18} />}
-        </button>
+        <Button type="submit" disabled={busy || !prompt.trim()}>
+          <Sparkles size={15} />
+          {busy ? "Preparing…" : "Preview changes"}
+          <ArrowRight size={15} />
+        </Button>
       </form>
       {!proposal && (
         <div className="roomie-suggestions">
-          {[
-            { label: "A lavender mood", prompt: "A lavender mood" },
-            {
-              label: "A little to-do",
-              prompt: "Add a task: Take a mindful break",
-            },
-            {
-              label: "Sunset palette",
-              prompt: "Give my room a warm sunset palette",
-            },
-          ].map((item) => (
+          {suggestions.map((item) => (
             <button
               key={item.label}
               disabled={busy}
               onClick={() => preview(null, item.prompt)}
             >
-              <Sparkles size={12} />
+              <Plus size={12} />
               {item.label}
             </button>
           ))}
@@ -205,9 +203,10 @@ export function RoomiePanel({ data, act, toast, navigate, compact = false }) {
       {proposal && (
         <div className="roomie-proposal">
           <span className="eyebrow">
-            <Eye size={13} /> YOUR PREVIEW
+            <Eye size={13} />
+            PREVIEW
           </span>
-          <p>{proposal.message || "Your new room is ready to preview."}</p>
+          <p>{proposal.message || "Review your changes."}</p>
           {proposal.action === "room" && (
             <div className="roomie-scene-preview">
               <RoomScene
@@ -220,13 +219,6 @@ export function RoomiePanel({ data, act, toast, navigate, compact = false }) {
                 compact
               />
             </div>
-          )}
-          {proposal.theme && (
-            <span className="roomie-proposal-tag">
-              Palette:{" "}
-              {themes.find((theme) => theme.id === proposal.theme)?.name ||
-                proposal.theme}
-            </span>
           )}
           {proposal.tasks?.length > 0 && (
             <ul>
@@ -247,21 +239,44 @@ export function RoomiePanel({ data, act, toast, navigate, compact = false }) {
               onClick={() => setProposal(null)}
               disabled={busy}
             >
-              Dismiss
+              Cancel
             </Button>
           </div>
-          <small>Nothing changes until you apply.</small>
         </div>
       )}
       <div className="roomie-footnote">
-        <ShieldCheck size={13} />
-        <span>Only you can see your Roomie conversations.</span>
+        <ShieldCheck size={14} />
+        <span>Review before applying. Room changes can be undone.</span>
       </div>
     </section>
   );
 }
 
-export function RoomPage({ data, act, navigate, toast }) {
+export function RoomPage(props) {
+  const { data } = props;
+  if (
+    data.session &&
+    (data.session.hostId !== data.user.id ||
+      data.session.participants.length > 1)
+  ) {
+    return (
+      <SharedRoom
+        {...props}
+        ownerRoomie={
+          <RoomiePanel
+            data={data}
+            act={props.act}
+            toast={props.toast}
+            navigate={props.navigate}
+          />
+        }
+      />
+    );
+  }
+  return <OwnerRoomPage {...props} />;
+}
+
+function OwnerRoomPage({ data, act, navigate, toast }) {
   const room = data.room;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(() => clone(room));
@@ -330,7 +345,7 @@ export function RoomPage({ data, act, navigate, toast }) {
         objects: draft.objects,
       });
       setEditing(false);
-      toast("Your room feels a little more you.");
+      toast("Room saved.");
     } catch (error) {
       toast(error.message);
     } finally {
@@ -341,7 +356,7 @@ export function RoomPage({ data, act, navigate, toast }) {
     setBusy(true);
     try {
       await act("room.undo");
-      toast("Your previous room is back.");
+      toast("Previous room restored.");
     } catch (error) {
       toast(error.message);
     } finally {
@@ -352,354 +367,291 @@ export function RoomPage({ data, act, navigate, toast }) {
     setBusy(true);
     try {
       if (!data.session) await act("session.start");
-      navigate("visits");
+      navigate("visits", "invite");
     } catch (error) {
       toast(error.message);
     } finally {
       setBusy(false);
     }
   }
+  const pending = data.requests.filter(
+    (request) =>
+      ["knock", "invite", "access"].includes(request.type) &&
+      request.status === "pending",
+  ).length;
   return (
-    <div className="room-page">
+    <div className="room-page room-page-simple">
       <div className="page-heading room-page-heading">
         <div>
-          <span className="eyebrow">A CORNER OF THE WORLD, JUST FOR YOU</span>
-          <h1>
-            My room<span className="heading-dot">.</span>
-          </h1>
-          <p>A little space, entirely yours.</p>
+          <h1>My room</h1>
+          <p>Arrange your space and invite your friends.</p>
         </div>
         <div className="room-top-actions">
-          <Button variant="secondary" onClick={host} disabled={busy}>
-            <Users size={16} />
-            {data.session ? "Your gathering" : "Invite someone in"}
+          <Button variant="secondary" onClick={() => navigate("visits")}>
+            <MessageCircle size={16} />
+            Invites &amp; knocks
+            {pending > 0 && (
+              <span className="room-pending-count">{pending}</span>
+            )}
           </Button>
-          <Button
-            onClick={() => (editing ? save() : beginEdit())}
-            disabled={busy}
-          >
-            {editing ? <Check size={16} /> : <SlidersHorizontal size={16} />}
-            {editing ? "Save my room" : "Make it yours"}
+          <Button onClick={host} disabled={busy}>
+            <Users size={16} />
+            Invite friend
           </Button>
         </div>
       </div>
-      <div className="room-main-grid">
-        <div className="room-main-column">
-          <section className={`room-stage-card ${editing ? "is-editing" : ""}`}>
-            <div className="room-stage-heading">
-              <div>
-                <span className="room-stage-label">
-                  <span className="live-dot" />
-                  {data.user.name.split(" ")[0]}'s little world
-                </span>
-                <span className="room-stage-theme">
-                  {themes.find((theme) => theme.id === sceneRoom.theme)?.name ||
-                    "Sunday sage"}
-                </span>
-              </div>
-              <span className="room-privacy">
-                <LockKeyhole size={12} />
-                Your private room
+      <div className="room-workspace">
+        <section className={`room-stage-card ${editing ? "is-editing" : ""}`}>
+          <div className="room-stage-heading">
+            <div>
+              <span className="room-stage-label">
+                <span className="live-dot" />
+                {data.user.name.split(" ")[0]}'s room
+              </span>
+              <span className="room-stage-theme">
+                {themes.find((theme) => theme.id === sceneRoom.theme)?.name ||
+                  "Sage"}
               </span>
             </div>
-            <div className="room-illustration">
-              <RoomScene
-                room={sceneRoom}
-                user={data.user}
-                editing={editing}
-                selected={selected}
-                onSelect={setSelected}
-                onMove={moveObject}
-                onObjectClick={(object) =>
-                  object.type === "desk"
-                    ? navigate("tools")
-                    : setInspect(object)
-                }
-              />
-              <span className="room-sunlight-note">
-                <span>☀︎</span> The light feels good in here.
+            <span className="room-privacy">
+              <LockKeyhole size={12} />
+              Private
+            </span>
+          </div>
+          <div className="room-illustration">
+            <RoomScene
+              room={sceneRoom}
+              user={data.user}
+              editing={editing}
+              selected={selected}
+              onSelect={setSelected}
+              onMove={moveObject}
+              onObjectClick={(object) =>
+                object.type === "desk" ? navigate("tools") : setInspect(object)
+              }
+              onUserClick={(person) => navigate("profile", person.id)}
+            />
+            {editing && (
+              <span className="room-edit-hint">
+                <Pencil size={13} />
+                Drag furniture or use the arrow keys
               </span>
-              {editing && (
-                <span className="room-edit-hint">
-                  <Pencil size={13} />
-                  Drag furniture, or select it and use arrow keys
-                </span>
-              )}
-            </div>
-            <div className="room-stage-footer">
-              <div className="room-owner">
-                <Avatar user={data.user} size={35} />
-                <div>
-                  <strong>Home, sweet home.</strong>
-                  <span>
-                    {data.session
-                      ? `${data.session.participants.length} ${data.session.participants.length === 1 ? "person" : "people"} hanging out`
-                      : "A little peace. A lot of possibility."}
-                  </span>
-                </div>
-              </div>
-              <button
-                className="room-scene-shortcut"
-                onClick={() => navigate("tools")}
-              >
-                <span>Your desk, your thoughts</span>
-                <ArrowRight size={17} />
-              </button>
-            </div>
-          </section>
-          {editing && (
-            <section className="room-editor card">
-              <div className="section-title">
-                <div>
-                  <span className="eyebrow">A SPACE THAT FEELS LIKE YOU</span>
-                  <h3>Make yourself at home</h3>
-                </div>
-                <Button
-                  variant="ghost"
-                  onClick={() => setEditing(false)}
-                  disabled={busy}
-                >
-                  <X size={15} />
-                  Cancel
-                </Button>
-              </div>
-              <div className="room-theme-options">
-                {themes.map((theme) => (
-                  <button
-                    key={theme.id}
-                    className={draft.theme === theme.id ? "active" : ""}
-                    onClick={() =>
-                      setDraft((current) => ({ ...current, theme: theme.id }))
-                    }
-                  >
-                    <span style={{ background: theme.color }} />
-                    {theme.name}
-                    {draft.theme === theme.id && <Check size={14} />}
-                  </button>
-                ))}
-              </div>
-              <div className="room-editor-objects">
-                {draft.objects.map((object) => (
-                  <button
-                    key={object.id}
-                    className={selected === object.id ? "active" : ""}
-                    onClick={() => setSelected(object.id)}
-                  >
-                    {object.type.replace("shelf", "bookcase")}
-                  </button>
-                ))}
-                <button
-                  className="add-furniture"
-                  onClick={() => setShowFurniture(true)}
-                >
-                  <Plus size={14} />
-                  Furniture
-                </button>
-              </div>
-              {selectedObject && (
-                <div className="room-object-controls">
-                  <label>
-                    Color
-                    <input
-                      aria-label={`${selectedObject.type} color`}
-                      type="color"
-                      value={selectedObject.color || "#a4b095"}
-                      onChange={(event) =>
-                        changeObject({ color: event.target.value })
-                      }
-                    />
-                  </label>
-                  <div className="room-position-controls">
-                    <button
-                      className="icon-button"
-                      aria-label="Move left"
-                      onClick={() =>
-                        moveObject(
-                          selected,
-                          selectedObject.x - 1,
-                          selectedObject.y,
-                        )
-                      }
-                    >
-                      <ArrowLeft size={16} />
-                    </button>
-                    <button
-                      className="icon-button"
-                      aria-label="Move up"
-                      onClick={() =>
-                        moveObject(
-                          selected,
-                          selectedObject.x,
-                          selectedObject.y - 1,
-                        )
-                      }
-                    >
-                      <ArrowUp size={16} />
-                    </button>
-                    <button
-                      className="icon-button"
-                      aria-label="Move down"
-                      onClick={() =>
-                        moveObject(
-                          selected,
-                          selectedObject.x,
-                          selectedObject.y + 1,
-                        )
-                      }
-                    >
-                      <ArrowDown size={16} />
-                    </button>
-                    <button
-                      className="icon-button"
-                      aria-label="Move right"
-                      onClick={() =>
-                        moveObject(
-                          selected,
-                          selectedObject.x + 1,
-                          selectedObject.y,
-                        )
-                      }
-                    >
-                      <ArrowRight size={16} />
-                    </button>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    onClick={() =>
-                      changeObject({
-                        rotation: (selectedObject.rotation + 15) % 360,
-                      })
-                    }
-                  >
-                    <RotateCw size={14} />
-                    Rotate
-                  </Button>
-                  <button
-                    className="icon-button room-delete"
-                    aria-label={`Remove ${selectedObject.type}`}
-                    onClick={() => {
-                      setDraft((current) => ({
-                        ...current,
-                        objects: current.objects.filter(
-                          (object) => object.id !== selected,
-                        ),
-                      }));
-                      setSelected(null);
-                    }}
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              )}
-              <div className="room-editor-bottom">
-                <span>Changes stay private. Save when it feels right.</span>
-                <Button onClick={save} disabled={busy}>
-                  <Check size={15} />
-                  Save changes
-                </Button>
-              </div>
-            </section>
-          )}
-          <section className="room-tools-section">
-            <div className="room-section-heading">
-              <div>
-                <span className="eyebrow">JUST AROUND THE CORNER</span>
-                <h2>Your little essentials</h2>
-              </div>
-              <span>
-                <LockKeyhole size={12} />
-                Always private
-              </span>
-            </div>
-            <div className="room-tool-shortcuts">
-              {Object.entries(toolInfo).map(([type, info]) => {
-                const Icon = info.icon;
-                const resource = data.resources.find(
-                  (item) => item.type === type,
-                );
-                const count = Array.isArray(resource?.content)
-                  ? resource.content.length
-                  : null;
-                return (
-                  <button
-                    key={type}
-                    className={`room-tool-shortcut ${info.color}`}
-                    onClick={() => navigate("tools", type)}
-                  >
-                    <span className="room-tool-icon">
-                      <Icon size={22} strokeWidth={1.6} />
-                    </span>
-                    <strong>{info.title}</strong>
-                    <span>
-                      {type === "tasks"
-                        ? `${completed} of ${tasks} complete`
-                        : count !== null
-                          ? `${count} ${type === "planner" ? "plans" : type === "journal" ? "entries" : "moments"}`
-                          : "Catch an idea"}
-                    </span>
-                    <ArrowRight className="room-tool-arrow" size={15} />
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-          <div className="room-kind-note">
-            <span className="room-kind-star">✳︎</span>
-            <p>
-              Your room is for living, not performing.{" "}
-              <strong>Come as you are.</strong>
-            </p>
-            {room.history && (
-              <button onClick={undo} disabled={busy}>
-                <Undo2 size={14} />
-                Undo last room change
-              </button>
             )}
           </div>
-        </div>
-        <aside className="room-side-column">
-          <section className="room-avatar-card">
-            <div className="room-avatar-card-top">
-              <span className="eyebrow">HEY, THAT'S YOU</span>
-              <span className="room-small-spark">✳︎</span>
+          <div className="room-stage-footer">
+            <button
+              className="room-avatar-link"
+              onClick={() => navigate("avatar")}
+            >
+              <Avatar user={data.user} size={34} />
+              <span>Edit avatar</span>
+              <Pencil size={13} />
+            </button>
+            <div className="row">
+              <button
+                className="room-scene-shortcut"
+                onClick={() => (editing ? setEditing(false) : beginEdit())}
+              >
+                <SlidersHorizontal size={15} />
+                {editing ? "Close editor" : "Manual controls"}
+              </button>
+              {room.history && (
+                <button
+                  className="room-scene-shortcut"
+                  onClick={undo}
+                  disabled={busy}
+                >
+                  <Undo2 size={15} />
+                  Undo
+                </button>
+              )}
             </div>
-            <div className="room-avatar-art">
-              <span className="avatar-orbit orbit-one" />
-              <span className="avatar-orbit orbit-two" />
-              <Avatar user={data.user} size={148} />
-              <span className="avatar-decoration decor-one">✦</span>
-              <span className="avatar-decoration decor-two">✦</span>
-            </div>
-            <h3>{data.user.name.split(" ")[0]}, in your element.</h3>
-            <p>A little character. A lot of you.</p>
-            <Button variant="secondary" onClick={() => navigate("avatar")}>
-              <Palette size={15} />
-              Style your avatar
-              <ArrowRight size={15} />
-            </Button>
-          </section>
-          <RoomiePanel
-            data={data}
-            act={act}
-            toast={toast}
-            navigate={navigate}
-            compact
-          />
-          <section className="room-presence-note">
-            <Coffee size={19} />
-            <div>
-              <strong>No rush. You're home.</strong>
-              <p>Settle in, make something, or simply be.</p>
-            </div>
-          </section>
-        </aside>
+          </div>
+        </section>
+        <RoomiePanel data={data} act={act} toast={toast} navigate={navigate} />
       </div>
+      {editing && (
+        <section className="room-editor card">
+          <div className="section-title">
+            <div>
+              <span className="eyebrow">APPEARANCE</span>
+              <h3>Room controls</h3>
+            </div>
+            <Button
+              variant="ghost"
+              onClick={() => setEditing(false)}
+              disabled={busy}
+            >
+              <X size={15} />
+              Cancel
+            </Button>
+          </div>
+          <div className="room-theme-options">
+            {themes.map((theme) => (
+              <button
+                key={theme.id}
+                className={draft.theme === theme.id ? "active" : ""}
+                onClick={() =>
+                  setDraft((current) => ({ ...current, theme: theme.id }))
+                }
+              >
+                <span style={{ background: theme.color }} />
+                {theme.name}
+                {draft.theme === theme.id && <Check size={14} />}
+              </button>
+            ))}
+          </div>
+          <div className="room-editor-objects">
+            {draft.objects.map((object) => (
+              <button
+                key={object.id}
+                className={selected === object.id ? "active" : ""}
+                onClick={() => setSelected(object.id)}
+              >
+                {object.type.replace("shelf", "bookcase")}
+              </button>
+            ))}
+            <button
+              className="add-furniture"
+              onClick={() => setShowFurniture(true)}
+            >
+              <Plus size={14} />
+              Furniture
+            </button>
+          </div>
+          {selectedObject && (
+            <div className="room-object-controls">
+              <label>
+                Color
+                <input
+                  aria-label={`${selectedObject.type} color`}
+                  type="color"
+                  value={selectedObject.color || "#a4b095"}
+                  onChange={(event) =>
+                    changeObject({ color: event.target.value })
+                  }
+                />
+              </label>
+              <div className="room-position-controls">
+                <button
+                  className="icon-button"
+                  aria-label="Move left"
+                  onClick={() =>
+                    moveObject(selected, selectedObject.x - 1, selectedObject.y)
+                  }
+                >
+                  <ArrowLeft size={16} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="Move up"
+                  onClick={() =>
+                    moveObject(selected, selectedObject.x, selectedObject.y - 1)
+                  }
+                >
+                  <ArrowUp size={16} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="Move down"
+                  onClick={() =>
+                    moveObject(selected, selectedObject.x, selectedObject.y + 1)
+                  }
+                >
+                  <ArrowDown size={16} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="Move right"
+                  onClick={() =>
+                    moveObject(selected, selectedObject.x + 1, selectedObject.y)
+                  }
+                >
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+              <Button
+                variant="ghost"
+                onClick={() =>
+                  changeObject({
+                    rotation: (selectedObject.rotation + 15) % 360,
+                  })
+                }
+              >
+                <RotateCw size={14} />
+                Rotate
+              </Button>
+              <button
+                className="icon-button room-delete"
+                aria-label={`Remove ${selectedObject.type}`}
+                onClick={() => {
+                  setDraft((current) => ({
+                    ...current,
+                    objects: current.objects.filter(
+                      (object) => object.id !== selected,
+                    ),
+                  }));
+                  setSelected(null);
+                }}
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          )}
+          <div className="room-editor-bottom">
+            <span>Save changes to update your room.</span>
+            <Button onClick={save} disabled={busy}>
+              <Check size={15} />
+              Save changes
+            </Button>
+          </div>
+        </section>
+      )}
+      <section className="room-tools-section">
+        <div className="room-section-heading">
+          <div>
+            <span className="eyebrow">PRIVATE TOOLS</span>
+            <h2>Private tools</h2>
+          </div>
+          <span>
+            <LockKeyhole size={12} />
+            Only shared with your approval
+          </span>
+        </div>
+        <div className="room-tool-shortcuts">
+          {Object.entries(toolInfo).map(([type, info]) => {
+            const Icon = info.icon;
+            const resource = data.resources.find((item) => item.type === type);
+            const count = Array.isArray(resource?.content)
+              ? resource.content.length
+              : null;
+            return (
+              <button
+                key={type}
+                className={`room-tool-shortcut ${info.color}`}
+                onClick={() => navigate("tools", type)}
+              >
+                <span className="room-tool-icon">
+                  <Icon size={22} strokeWidth={1.6} />
+                </span>
+                <strong>{info.title}</strong>
+                <span>
+                  {type === "tasks"
+                    ? `${completed} of ${tasks} complete`
+                    : count !== null
+                      ? `${count} ${type === "planner" ? "plans" : type === "journal" ? "entries" : "moments"}`
+                      : "Open board"}
+                </span>
+                <ArrowRight className="room-tool-arrow" size={15} />
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       {showFurniture && (
-        <Modal
-          title="A little something for your room"
-          onClose={() => setShowFurniture(false)}
-        >
-          <p className="muted">Pick a piece, then find its perfect spot.</p>
+        <Modal title="Add furniture" onClose={() => setShowFurniture(false)}>
+          <p className="muted">Select an item, then move it into place.</p>
           <div className="furniture-picker">
             {Object.keys(roomObjectDefaults).map((type) => (
               <button key={type} onClick={() => addObject(type)}>
@@ -741,10 +693,7 @@ export function RoomPage({ data, act, navigate, toast }) {
               compact
             />
           </div>
-          <p className="muted">
-            A little piece of your world. Move it, recolor it, or give your room
-            a new mood.
-          </p>
+          <p className="muted">Move, recolor, or remove this item.</p>
           <Button
             onClick={() => {
               beginEdit(inspect.id);
@@ -752,7 +701,7 @@ export function RoomPage({ data, act, navigate, toast }) {
             }}
           >
             <Pencil size={16} />
-            Make it yours
+            Edit furniture
           </Button>
         </Modal>
       )}
@@ -773,7 +722,7 @@ export function AvatarPage({ data, act, navigate, toast }) {
     setBusy(true);
     try {
       await act("profile.update", { avatar: config });
-      toast("Looking good. Your new avatar is saved.");
+      toast("Avatar saved.");
     } catch (error) {
       toast(error.message);
     } finally {
@@ -790,18 +739,28 @@ export function AvatarPage({ data, act, navigate, toast }) {
       hair: pick(Object.values(avatarOptions.hair)),
       hairStyle: pick(["waves", "bob", "curls", "crop", "braids"]),
       outfit: pick(Object.values(avatarOptions.outfit)),
-      accessory: pick(["none", "glasses", "earrings", "headphones", "cap"]),
+      accessory: pick([
+        "none",
+        "glasses",
+        "earrings",
+        "headphones",
+        "cap",
+        "beanie",
+      ]),
+      eyes: pick(Object.values(avatarOptions.eyes)),
+      outfitStyle: pick(avatarStyles.outfitStyle.map((item) => item.id)),
+      expression: pick(avatarStyles.expression.map((item) => item.id)),
     });
   }
   return (
     <div className="avatar-page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">A LITTLE CHARACTER, A LOT OF YOU</span>
+          <span className="eyebrow">AVATAR STUDIO</span>
           <h1>
-            Your kind of character<span className="heading-dot">.</span>
+            Avatar studio<span className="heading-dot">.</span>
           </h1>
-          <p>Dress for yourself. The rest is just a bonus.</p>
+          <p>Customize your avatar.</p>
         </div>
         <Button onClick={save} disabled={busy || !changed}>
           <Check size={16} />
@@ -811,15 +770,15 @@ export function AvatarPage({ data, act, navigate, toast }) {
       <div className="avatar-designer-grid">
         <section className="avatar-large-preview">
           <span className="avatar-preview-label">
-            NICE TO MEET YOU, {data.user.name.split(" ")[0].toUpperCase()}
+            PREVIEW — {data.user.name.split(" ")[0].toUpperCase()}
           </span>
           <div className="avatar-preview-halo">
             <span className="avatar-preview-spark spark-a">✦</span>
             <span className="avatar-preview-spark spark-b">✳︎</span>
             <Avatar config={config} size={300} />
           </div>
-          <h2>Entirely, wonderfully you.</h2>
-          <p>One-of-a-kind looks for your little world.</p>
+          <h2>Your avatar</h2>
+          <p>Changes appear here before you save.</p>
           <Button variant="secondary" onClick={randomize}>
             <WandSparkles size={16} />
             Surprise me
@@ -828,7 +787,7 @@ export function AvatarPage({ data, act, navigate, toast }) {
             <Avatar config={config} size={40} />
             <Avatar config={config} size={56} />
             <Avatar config={config} size={76} />
-            <span>Good at every size.</span>
+            <span>Profile sizes</span>
           </div>
         </section>
         <section className="avatar-customizer card">
@@ -837,13 +796,13 @@ export function AvatarPage({ data, act, navigate, toast }) {
               className={tab === "look" ? "active" : ""}
               onClick={() => setTab("look")}
             >
-              Your look
+              Appearance
             </button>
             <button
               className={tab === "style" ? "active" : ""}
               onClick={() => setTab("style")}
             >
-              Your style
+              Clothing & accessories
             </button>
           </div>
           {tab === "look" ? (
@@ -854,9 +813,21 @@ export function AvatarPage({ data, act, navigate, toast }) {
                 options={avatarOptions.skin}
                 onChange={(value) => choose("skin", value)}
               />
+              <ColorChoices
+                label="Eye color"
+                value={config.eyes}
+                options={avatarOptions.eyes}
+                onChange={(value) => choose("eyes", value)}
+              />
+              <AvatarStyleChoices
+                label="Expression"
+                field="expression"
+                config={config}
+                choose={choose}
+              />
               <div className="avatar-choice-section">
-                <h3>Hair, with personality</h3>
-                <p>A good hair day, every day.</p>
+                <h3>Hair style</h3>
+                <p>Choose a hair style.</p>
                 <div className="hair-style-options">
                   {["waves", "bob", "curls", "crop", "braids"].map((style) => (
                     <button
@@ -875,14 +846,14 @@ export function AvatarPage({ data, act, navigate, toast }) {
                       />
                       <span>
                         {style === "waves"
-                          ? "The wave"
+                          ? "Waves"
                           : style === "bob"
-                            ? "Soft bob"
+                            ? "Bob"
                             : style === "curls"
-                              ? "Cloud curls"
+                              ? "Curls"
                               : style === "crop"
-                                ? "Fresh crop"
-                                : "Braided"}
+                                ? "Crop"
+                                : "Braids"}
                       </span>
                     </button>
                   ))}
@@ -897,22 +868,29 @@ export function AvatarPage({ data, act, navigate, toast }) {
             </>
           ) : (
             <>
+              <AvatarStyleChoices
+                label="Outfit style"
+                field="outfitStyle"
+                config={config}
+                choose={choose}
+              />
               <ColorChoices
-                label="Your favorite color, worn well"
+                label="Outfit color"
                 value={config.outfit}
                 options={avatarOptions.outfit}
                 onChange={(value) => choose("outfit", value)}
               />
               <div className="avatar-choice-section">
-                <h3>The finishing touch</h3>
-                <p>Small details. Big you energy.</p>
+                <h3>Accessories</h3>
+                <p>Choose an accessory.</p>
                 <div className="avatar-accessories">
                   {[
-                    { id: "none", label: "Keep it simple" },
-                    { id: "glasses", label: "Round frames" },
-                    { id: "earrings", label: "Golden hoops" },
-                    { id: "headphones", label: "In my own world" },
-                    { id: "cap", label: "Off-duty cap" },
+                    { id: "none", label: "None" },
+                    { id: "glasses", label: "Glasses" },
+                    { id: "earrings", label: "Earrings" },
+                    { id: "headphones", label: "Headphones" },
+                    { id: "cap", label: "Cap" },
+                    { id: "beanie", label: "Beanie" },
                   ].map((item) => (
                     <button
                       key={item.id}
@@ -934,7 +912,7 @@ export function AvatarPage({ data, act, navigate, toast }) {
           <div className="avatar-customizer-footer">
             <span>
               <ShieldCheck size={15} />
-              Your avatar travels with you.
+              Saved across rooms and your profile.
             </span>
             <Button
               variant="ghost"
@@ -951,6 +929,27 @@ export function AvatarPage({ data, act, navigate, toast }) {
         <ArrowLeft size={15} />
         Back to your room
       </button>
+    </div>
+  );
+}
+
+function AvatarStyleChoices({ label, field, config, choose }) {
+  return (
+    <div className="avatar-choice-section">
+      <h3>{label}</h3>
+      <div className="avatar-accessories">
+        {avatarStyles[field].map((item) => (
+          <button
+            key={item.id}
+            className={config[field] === item.id ? "active" : ""}
+            aria-pressed={config[field] === item.id}
+            onClick={() => choose(field, item.id)}
+          >
+            <Avatar config={{ ...config, [field]: item.id }} size={64} />
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1054,9 +1053,7 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
     if (
       await persist(
         next,
-        type === "journal"
-          ? "A thought, safely kept."
-          : "Saved to your private space.",
+        type === "journal" ? "Journal entry saved." : "Saved.",
       )
     )
       setEntry(null);
@@ -1128,15 +1125,15 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
     <div className="tools-page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">THE QUIETER SIDE OF YOUR WORLD</span>
+          <span className="eyebrow">PRIVATE TOOLS</span>
           <h1>
-            Room to be you<span className="heading-dot">.</span>
+            Private tools<span className="heading-dot">.</span>
           </h1>
-          <p>Your plans, thoughts, and favorite little moments.</p>
+          <p>Tasks, notes, plans, and memories.</p>
         </div>
         <span className="private-tools-badge">
           <LockKeyhole size={14} />
-          For your eyes only
+          Private by default
         </span>
       </div>
       <div className="private-tools-layout">
@@ -1162,7 +1159,7 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
           })}
           <div className="private-tool-note">
             <LockKeyhole size={21} />
-            <strong>A room within your room.</strong>
+            <strong>Control who can open your tools.</strong>
             <p>
               Visitors can only open a tool when you explicitly give them
               access.
@@ -1197,9 +1194,9 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                   <strong>
                     {content.length
                       ? completed === content.length
-                        ? "A little lighter already."
-                        : "One little thing at a time."
-                      : "A fresh page for your day."}
+                        ? "All tasks completed."
+                        : "Your tasks"
+                      : "No tasks yet"}
                   </strong>
                   <span>
                     {completed} of {content.length} complete
@@ -1217,7 +1214,7 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                 <Plus size={19} />
                 <input
                   aria-label="New task"
-                  placeholder="What would you like to make time for?"
+                  placeholder="Add a task…"
                   maxLength={250}
                   value={taskText}
                   onChange={(event) => setTaskText(event.target.value)}
@@ -1232,9 +1229,9 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
               </form>
               <div className="task-filter tabs">
                 {[
-                  ["all", "Everything"],
-                  ["active", "Still to do"],
-                  ["done", "Little wins"],
+                  ["all", "All tasks"],
+                  ["active", "To do"],
+                  ["done", "Completed"],
                 ].map(([value, label]) => (
                   <button
                     key={value}
@@ -1311,13 +1308,9 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
               ).length && (
                 <Empty
                   icon={CheckCheck}
-                  title={
-                    filter === "done"
-                      ? "Your little wins will live here."
-                      : "A little breathing room."
-                  }
+                  title={filter === "done" ? "No completed tasks" : "No tasks"}
                 >
-                  Add something small. Start where you are.
+                  Add a task using the field above.
                 </Empty>
               )}
               {completed > 0 && (
@@ -1327,7 +1320,7 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                   onClick={() =>
                     persist(
                       content.filter((task) => !task.done),
-                      "A clean slate for what comes next.",
+                      "Completed tasks cleared.",
                     )
                   }
                 >
@@ -1345,7 +1338,8 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                   {content.length === 1 ? "thought" : "thoughts"}, safely kept
                 </span>
                 <Button onClick={() => addEntry()}>
-                  <Plus size={15} />A new page
+                  <Plus size={15} />
+                  New entry
                 </Button>
               </div>
               {content.length ? (
@@ -1393,8 +1387,8 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                     ))}
                 </div>
               ) : (
-                <Empty icon={BookOpen} title="How are you, really?">
-                  No audience. No perfect words. Just a place to start.
+                <Empty icon={BookOpen} title="No journal entries">
+                  Create your first entry.
                 </Empty>
               )}
             </div>
@@ -1433,7 +1427,8 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                   </button>
                 </div>
                 <Button onClick={() => addEntry()}>
-                  <Plus size={14} />A little plan
+                  <Plus size={14} />
+                  Add plan
                 </Button>
               </div>
               <div className="calendar-grid">
@@ -1488,7 +1483,7 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                 })}
               </div>
               <div className="calendar-upcoming">
-                <h3>Around the corner</h3>
+                <h3>Upcoming plans</h3>
                 {[...content]
                   .sort((a, b) => a.date.localeCompare(b.date))
                   .filter((item) => item.date >= today)
@@ -1516,7 +1511,7 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                     </div>
                   ))}
                 {!content.some((item) => item.date >= today) && (
-                  <p className="muted">A little space for something good.</p>
+                  <p className="muted">No upcoming plans.</p>
                 )}
               </div>
             </div>
@@ -1524,10 +1519,10 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
           {type === "memories" && (
             <div className="memories-tool">
               <div className="tool-action-row">
-                <span>{content.length} moments worth keeping</span>
+                <span>{content.length} memories</span>
                 <Button onClick={() => addEntry()}>
                   <Plus size={15} />
-                  Keep a moment
+                  Add memory
                 </Button>
               </div>
               {content.length ? (
@@ -1555,7 +1550,7 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                           </span>
                         )}
                         <h3>{item.title}</h3>
-                        <span>A little moment, forever yours</span>
+                        <span>Private memory</span>
                       </button>
                       <button
                         className="memory-delete"
@@ -1573,11 +1568,8 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                   ))}
                 </div>
               ) : (
-                <Empty
-                  icon={Image}
-                  title="The little things are the big things."
-                >
-                  Keep a photo, a place, or a moment that makes you smile.
+                <Empty icon={Image} title="No memories">
+                  Upload a photo to create a memory.
                 </Empty>
               )}
             </div>
@@ -1586,24 +1578,21 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
             <div className="whiteboard-tool">
               <div className="tool-action-row">
                 <span>
-                  <StickyNote size={14} />A messy thought is a good start.
+                  <StickyNote size={14} />
+                  Write and save your ideas.
                 </span>
                 <div className="row">
                   <Button
                     variant="ghost"
                     disabled={busy || !content.text}
-                    onClick={() =>
-                      persist({ text: "" }, "Room for a fresh idea.")
-                    }
+                    onClick={() => persist({ text: "" }, "Board cleared.")}
                   >
                     <Trash2 size={14} />
                     Clear
                   </Button>
                   <Button
                     disabled={busy || content.text === resource?.content?.text}
-                    onClick={() =>
-                      persist(content, "Your ideas are safely kept.")
-                    }
+                    onClick={() => persist(content, "Board saved.")}
                   >
                     <Save size={14} />
                     Save board
@@ -1616,9 +1605,7 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                   <textarea
                     aria-label="Your private whiteboard"
                     value={content.text || ""}
-                    placeholder={
-                      "An idea, a daydream, a little spark…\n\nWhat could you make room for?"
-                    }
+                    placeholder={"Write your notes or ideas…"}
                     maxLength={20000}
                     onChange={(event) =>
                       setContent({ text: event.target.value })
@@ -1628,13 +1615,13 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                 <span className="whiteboard-doodle doodle-a">✳︎</span>
                 <span className="whiteboard-doodle doodle-b">✦</span>
                 <span className="whiteboard-note">
-                  Good things start on a blank page.
+                  Save your changes when you finish.
                 </span>
               </div>
               <div className="whiteboard-footer">
                 <span>
                   <LockKeyhole size={12} />
-                  Your private thinking space
+                  Private board
                 </span>
                 <button
                   onClick={() => {
@@ -1647,11 +1634,11 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                     link.download = "my-roomverse-ideas.txt";
                     link.click();
                     URL.revokeObjectURL(url);
-                    toast("Your ideas are ready to take with you.");
+                    toast("Notes exported.");
                   }}
                 >
                   <Download size={14} />
-                  Take your ideas with you
+                  Export notes
                 </button>
               </div>
             </div>
@@ -1668,15 +1655,15 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
           title={
             type === "journal"
               ? entry.id
-                ? "A page from your journal"
-                : "A fresh little page"
+                ? "Edit journal entry"
+                : "New journal entry"
               : type === "planner"
                 ? entry.id
-                  ? "Your little plan"
-                  : "Make a little plan"
+                  ? "Edit plan"
+                  : "Add plan"
                 : type === "memories"
-                  ? "A moment worth keeping"
-                  : "A little to-do"
+                  ? "Memory"
+                  : "Edit task"
           }
           onClose={() => setEntry(null)}
           wide={type === "journal"}
@@ -1700,7 +1687,7 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
           >
             {type === "tasks" ? (
               <label className="field">
-                Your to-do
+                Task
                 <input
                   autoFocus
                   value={entry.text || ""}
@@ -1714,10 +1701,10 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
             ) : (
               <label className="field">
                 {type === "journal"
-                  ? "Give this page a title"
+                  ? "Title"
                   : type === "memories"
-                    ? "What would you call this moment?"
-                    : "What are you making time for?"}
+                    ? "Memory title"
+                    : "Plan title"}
                 <input
                   autoFocus
                   value={entry.title || ""}
@@ -1751,10 +1738,10 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
             )}
             {type === "journal" && (
               <label className="field journal-writing-label">
-                Your thoughts
+                Entry
                 <textarea
                   value={entry.text || ""}
-                  placeholder="You don't have to have it all figured out. Start with a thought."
+                  placeholder="Write your entry…"
                   rows={10}
                   maxLength={20000}
                   onChange={(event) =>
@@ -1784,9 +1771,7 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                     <>
                       <Upload size={28} />
                       <strong>
-                        {uploadBusy
-                          ? "Keeping your moment…"
-                          : "Choose a little moment"}
+                        {uploadBusy ? "Uploading…" : "Choose a photo"}
                       </strong>
                       <span>Upload a photo · up to 8 MB</span>
                     </>
@@ -1835,7 +1820,7 @@ export function ToolsPage({ data, act, navigate, toast, selectedId }) {
                 </Button>
                 <Button type="submit" disabled={busy || uploadBusy}>
                   <Check size={15} />
-                  {busy ? "Saving…" : "Keep it safe"}
+                  {busy ? "Saving…" : "Save"}
                 </Button>
               </div>
             </div>

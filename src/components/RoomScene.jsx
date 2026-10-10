@@ -1,5 +1,5 @@
-import React, { useRef, useState } from "react";
-import { avatarPalette } from "./Avatar.jsx";
+import React, { useId, useRef, useState } from "react";
+import Avatar, { AvatarFigure } from "./Avatar.jsx";
 
 const themes = {
   sage: {
@@ -28,6 +28,7 @@ const themes = {
   },
 };
 export const roomObjectDefaults = {
+  bed: { x: 43, y: 57, color: "#94aa95" },
   sofa: { x: 39, y: 53, color: "#c97659" },
   rug: { x: 48, y: 70, color: "#eed2b0" },
   plant: { x: 76, y: 52, color: "#718f68" },
@@ -38,9 +39,69 @@ export const roomObjectDefaults = {
   tv: { x: 72, y: 49, color: "#4c5653" },
   table: { x: 44, y: 65, color: "#c4aa85" },
   chair: { x: 70, y: 78, color: "#bd775e" },
+  cushion: { x: 44, y: 63, color: "#cda780" },
+  window: { x: 64, y: 29, color: "#e7c5a3" },
 };
 
 function Furniture({ type, color }) {
+  if (type === "bed")
+    return (
+      <g>
+        <ellipse
+          cx="18"
+          cy="61"
+          rx="132"
+          ry="26"
+          fill="#5c5747"
+          opacity=".11"
+        />
+        <path d="M-111-60L-83-74L-6-54V18L-111-10Z" fill="#b99573" />
+        <path d="M-109-61L-11-36V-5L-109-31Z" fill="#c8a888" />
+        <path d="M-114-27L-38-54L132-11L53 23Z" fill="#f3eee0" />
+        <path d="M-114-27V5L54 52V23Z" fill="#d2c2ab" />
+        <path d="M54 23L132-11V23L54 52Z" fill="#bfb097" />
+        <path d="M-72-13L4-38L132-7L54 29Z" fill={color || "#94aa95"} />
+        <path d="M-72-13V11L54 49V29Z" fill={color || "#94aa95"} />
+        <path d="M54 29L132-7V17L54 49Z" fill="#78917c" />
+        <path d="M-72-13L-55-20L73 14L54 22Z" fill="#cbd7c7" opacity=".8" />
+        <path d="M-98-27L-66-39L-21-28L-52-15Q-75-16-98-27Z" fill="#fff9e9" />
+        <path d="M-91-25L-65-34L-28-25L-52-18Z" fill="#eee3ce" />
+        <path
+          d="M-109 4V26L-99 29V8M58 48V68L70 62V42M125 21V34L116 37V26"
+          stroke="#8f7358"
+          strokeWidth="5"
+        />
+        <path
+          d="M-49-7L59 23M-37-12L70 17"
+          stroke="#749077"
+          opacity=".25"
+          strokeWidth="2"
+        />
+      </g>
+    );
+  if (type === "cushion")
+    return (
+      <g>
+        <ellipse cy="20" rx="42" ry="10" fill="#615944" opacity=".08" />
+        <path d="M-43-7L-5-25L39-7L4 19Z" fill={color || "#cda780"} />
+        <path d="M-43-7Q-42 8 4 24Q37 11 39-7L4 19Z" fill="#b98d6b" />
+        <path
+          d="M-29-6L-5-17L25-7L3 10Z"
+          fill="none"
+          stroke="#edd9b6"
+          strokeWidth="2"
+        />
+      </g>
+    );
+  if (type === "window")
+    return (
+      <g>
+        <path d="M-49-48L50-24V52L-49 28Z" fill="#f1e5d0" />
+        <path d="M-43-41L44-20V44L-43 23Z" fill={color || "#e7c5a3"} />
+        <path d="M-43 4Q-15-22 6 7L43 23V44L-43 23Z" fill="#99ad94" />
+        <path d="M1-30V34M-43-9L44 12" stroke="#f4ead5" strokeWidth="5" />
+      </g>
+    );
   if (type === "sofa" || type === "couch")
     return (
       <g>
@@ -254,25 +315,26 @@ export default function RoomScene({
   onMove,
   onObjectClick,
   compact = false,
+  participants,
+  onUserClick,
 }) {
   const svgRef = useRef();
   const drag = useRef(null);
   const [dragging, setDragging] = useState(null);
   const theme = themes[room?.theme] || themes.sage;
   const objects = room?.objects || [];
-  const colors = avatarPalette(user?.avatar);
-  const hairStyle =
-    {
-      waves: "wave",
-      long: "bob",
-      short: "crop",
-      fade: "crop",
-      afro: "curls",
-      bun: "braids",
-    }[user?.avatar?.hairStyle] ||
-    user?.avatar?.hairStyle ||
-    "wave";
-  const accessory = user?.avatar?.accessory || "none";
+  const instanceId = useId().replace(/:/g, "");
+  const people = (participants || (user ? [user] : [])).filter(Boolean);
+  const personSlots =
+    people.length === 1
+      ? [[575, 515]]
+      : [
+          [505, 479],
+          [628, 477],
+          [396, 446],
+          [523, 543],
+          [310, 433],
+        ];
   const interactive = editing || Boolean(onObjectClick);
   const point = (event) => {
     const svg = svgRef.current;
@@ -313,7 +375,7 @@ export default function RoomScene({
   return (
     <svg
       ref={svgRef}
-      viewBox="0 0 900 650"
+      viewBox={`90 50 730 ${people.length > 5 ? 610 + Math.ceil((people.length - 5) / 9) * 65 : 560}`}
       className={`room-scene ${compact ? "compact" : ""} ${editing ? "editing" : ""} ${!interactive ? "readonly" : ""}`}
       role="group"
       aria-label="Your cozy two-dimensional room"
@@ -322,15 +384,21 @@ export default function RoomScene({
       onPointerCancel={finish}
     >
       <defs>
-        <linearGradient id="room-sunset" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`${instanceId}-sunset`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#ecc3a2" />
           <stop offset="1" stopColor="#efc8a1" />
         </linearGradient>
-        <linearGradient id="room-floor" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id={`${instanceId}-floor`} x1="0" y1="0" x2="1" y2="1">
           <stop stopColor={theme.floor} />
           <stop offset="1" stopColor="#d9c9af" />
         </linearGradient>
-        <filter id="room-shadow" x="-50%" y="-50%" width="200%" height="200%">
+        <filter
+          id={`${instanceId}-shadow`}
+          x="-50%"
+          y="-50%"
+          width="200%"
+          height="200%"
+        >
           <feGaussianBlur stdDeviation="12" />
         </filter>
       </defs>
@@ -341,7 +409,7 @@ export default function RoomScene({
         ry="37"
         fill="#a89576"
         opacity=".13"
-        filter="url(#room-shadow)"
+        filter={`url(#${instanceId}-shadow)`}
       />
       <path d="M125 387L358 301L785 405L550 554Z" fill="#b6a58d" />
       <path
@@ -350,7 +418,10 @@ export default function RoomScene({
       />
       <path d="M125 157L358 79V301L125 387Z" fill={theme.side} />
       <path d="M358 79L785 179V405L358 301Z" fill={theme.wall} />
-      <path d="M125 387L358 301L785 405L550 554Z" fill="url(#room-floor)" />
+      <path
+        d="M125 387L358 301L785 405L550 554Z"
+        fill={`url(#${instanceId}-floor)`}
+      />
       <g stroke="#cfbea2" strokeWidth="1" opacity=".6">
         <path d="M162 374L590 527M211 357L631 500M262 338L673 473M310 321L716 446M382 307L171 420M444 322L232 444M507 338L297 470M574 354L364 496M641 370L431 523M708 387L500 550" />
       </g>
@@ -367,7 +438,10 @@ export default function RoomScene({
         strokeWidth="9"
       />
       <path d="M402 139L540 171V286L402 252Z" fill="#f2eddc" />
-      <path d="M410 149L532 177V274L410 245Z" fill="url(#room-sunset)" />
+      <path
+        d="M410 149L532 177V274L410 245Z"
+        fill={`url(#${instanceId}-sunset)`}
+      />
       <ellipse cx="495" cy="203" rx="20" ry="23" fill="#ffe2b5" />
       <path
         d="M410 226Q440 193 473 219Q497 243 532 231V274L410 245Z"
@@ -486,103 +560,95 @@ export default function RoomScene({
             <Furniture type={object.type} color={object.color} />
           </g>
         ))}
-      <g transform="translate(575 426)" aria-hidden="true">
-        <ellipse cx="0" cy="89" rx="26" ry="9" fill="#605746" opacity=".14" />
-        <path d="M-12 48L-16 82L-6 87L1 56L7 85L18 84L14 45Z" fill="#646957" />
-        <path
-          d="M-17 83Q-27 84-22 90L-4 91V85M8 84V90L29 92Q34 86 17 84"
-          fill="#eee6d7"
-        />
-        <path
-          d="M-20-2Q-31 3-28 31L-18 30L-15 14V49Q0 57 18 48L16 12L26 28L34 22Q28-3 14-4Z"
-          fill={colors.outfit}
-        />
-        <path
-          d="M-29 28L-29 35Q-22 44-18 34L-18 29M27 21L32 29Q38 30 39 24L34 18"
-          fill={colors.skin}
-        />
-        {(hairStyle === "bob" || hairStyle === "braids") && (
-          <path
-            d="M-23-32Q-28-61-2-59Q27-60 26-31L27-7Q15 0 0-10Q-10 0-27-7Z"
-            fill={colors.hair}
-          />
-        )}
-        <path d="M-6-13V0Q0 8 7 0V-15" fill={colors.skin} />
-        <ellipse cy="-30" rx="21" ry="25" fill={colors.skin} />
-        {hairStyle === "wave" && (
-          <path
-            d="M-20-29Q-30-54-5-58Q20-65 23-35L15-26L12-41Q-8-30-16-40L-16-24Z"
-            fill={colors.hair}
-          />
-        )}
-        {hairStyle === "crop" && (
-          <path
-            d="M-21-34L-22-45Q-13-64 10-56Q30-53 22-30L15-44Q-3-37-16-46L-16-32Z"
-            fill={colors.hair}
-          />
-        )}
-        {hairStyle === "bob" && (
-          <path
-            d="M-24-28Q-29-59-1-60Q30-60 26-27L16-32L12-47Q0-38-20-40L-20-23Z"
-            fill={colors.hair}
-          />
-        )}
-        {hairStyle === "curls" && (
-          <g fill={colors.hair}>
-            <circle cx="-20" cy="-43" r="10" />
-            <circle cx="-10" cy="-54" r="11" />
-            <circle cx="5" cy="-55" r="12" />
-            <circle cx="18" cy="-49" r="10" />
-            <circle cx="25" cy="-38" r="9" />
-            <circle cx="-24" cy="-30" r="8" />
-          </g>
-        )}
-        {hairStyle === "braids" && (
-          <g fill={colors.hair}>
-            <path d="M-24-34Q-28-60-1-59Q29-62 26-35L20-28Q7-37-1-47Q-9-36-22-32Z" />
-            <path d="M-25-35Q-34-12-20 3L-13-3Q-22-23-18-36M23-35Q34-13 23 4L15-2Q26-26 17-35" />
-          </g>
-        )}
-        <ellipse cx="-7" cy="-27" rx="1.5" ry="2" fill="#30332d" />
-        <ellipse cx="8" cy="-26" rx="1.5" ry="2" fill="#30332d" />
-        <path
-          d="M-5-17Q1-13 7-17"
-          stroke="#915f4d"
-          strokeWidth="1.5"
-          fill="none"
-          strokeLinecap="round"
-        />
-        {["glasses", "round-glasses"].includes(accessory) && (
-          <g fill="none" stroke="#35443a" strokeWidth="1.5">
-            <circle cx="-7" cy="-27" r="6" />
-            <circle cx="8" cy="-26" r="6" />
-            <path d="M-1-27L2-26" />
-          </g>
-        )}
-        {accessory === "earrings" && (
-          <g fill="none" stroke="#d7a542" strokeWidth="1.8">
-            <ellipse cx="-21" cy="-17" rx="3" ry="5" />
-            <ellipse cx="21" cy="-17" rx="3" ry="5" />
-          </g>
-        )}
-        {accessory === "headphones" && (
-          <g fill="none" stroke="#ece8dd" strokeWidth="4">
-            <path d="M-25-29V-39Q-24-62 0-62Q26-63 26-38V-29" />
-            <path
-              d="M-24-33V-22M25-32V-21"
-              stroke="#596d65"
-              strokeWidth="6"
-              strokeLinecap="round"
+      {people.slice(0, 5).map((person, index) => {
+        const [x, y] = personSlots[index];
+        return (
+          <g
+            key={person.id || index}
+            className={`scene-person ${onUserClick ? "clickable" : ""}`}
+            transform={`translate(${x} ${y})`}
+            role={onUserClick ? "button" : "img"}
+            tabIndex={onUserClick ? 0 : undefined}
+            aria-label={
+              onUserClick
+                ? `View ${person.name || person.handle || "participant"} profile`
+                : `${person.name || "Participant"} avatar`
+            }
+            onClick={() => onUserClick?.(person)}
+            onKeyDown={(event) => {
+              if (onUserClick && ["Enter", " "].includes(event.key)) {
+                event.preventDefault();
+                onUserClick(person);
+              }
+            }}
+          >
+            <ellipse
+              cx="0"
+              cy="1"
+              rx="27"
+              ry="9"
+              fill="#655e4d"
+              opacity=".14"
             />
+            <g transform="translate(-35 -126)">
+              <AvatarFigure user={person} width={70} height={126} />
+            </g>
+            {people.length > 1 && (
+              <g className="scene-person-label">
+                <rect
+                  x="-39"
+                  y="11"
+                  width="78"
+                  height="19"
+                  rx="7"
+                  fill="#fffdf4"
+                  stroke="#e0dccd"
+                />
+                <text
+                  y="24"
+                  textAnchor="middle"
+                  fontSize="9"
+                  fill="#647258"
+                  fontFamily="DM Sans, sans-serif"
+                >
+                  {(person.name || person.handle || "Guest").split(" ")[0]}
+                </text>
+              </g>
+            )}
           </g>
-        )}
-        {accessory === "cap" && (
-          <g>
-            <path d="M-23-44Q-20-65 0-64Q23-66 26-45Z" fill="#73917c" />
-            <path d="M-1-48Q18-55 35-44Q28-39 0-42Z" fill="#556c5a" />
-          </g>
-        )}
-      </g>
+        );
+      })}
+      {people.length > 5 && (
+        <g className="scene-extra-participants">
+          {people.slice(5).map((person, index) => (
+            <g
+              key={person.id || index}
+              transform={`translate(${170 + (index % 9) * 64} ${590 + Math.floor(index / 9) * 64})`}
+              role={onUserClick ? "button" : "img"}
+              tabIndex={onUserClick ? 0 : undefined}
+              aria-label={`View ${person.name || "participant"} profile`}
+              onClick={() => onUserClick?.(person)}
+              onKeyDown={(event) => {
+                if (onUserClick && ["Enter", " "].includes(event.key)) {
+                  event.preventDefault();
+                  onUserClick(person);
+                }
+              }}
+            >
+              <Avatar user={person} size={42} />
+              <text
+                x="21"
+                y="53"
+                textAnchor="middle"
+                fontSize="8"
+                fill="#647258"
+              >
+                {(person.name || "Guest").split(" ")[0]}
+              </text>
+            </g>
+          ))}
+        </g>
+      )}
     </svg>
   );
 }

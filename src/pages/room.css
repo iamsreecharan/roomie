@@ -2776,3 +2776,241 @@
 .room-scene.readonly .room-object {
   cursor: default;
 }
+
+/* Focused room workspace: scene first, Roomie beside it, tools below. */
+.room-page-simple .room-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 22px;
+  align-items: stretch;
+  margin-bottom: 26px;
+}
+.room-page-simple .room-page-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+}
+.room-page-simple .room-page-heading h1 {
+  margin-bottom: 6px;
+}
+.room-page-simple .room-illustration {
+  min-height: 340px;
+  height: clamp(340px, 35vw, 520px);
+}
+.room-page-simple .room-illustration .room-scene {
+  width: 100%;
+  height: 100%;
+}
+.room-page-simple .room-stage-card {
+  background: linear-gradient(155deg, #f2ebe2, #ede9e6);
+  border-color: #e4d8d0;
+  border-radius: 24px;
+}
+.room-page-simple .room-stage-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 17px 22px;
+  border-top: 1px solid #dfd4ca;
+}
+.room-avatar-link,
+.room-scene-shortcut {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  font-size: 12px;
+  color: #786960;
+  min-height: 38px;
+}
+.room-avatar-link span {
+  color: #53433d;
+  font-weight: 600;
+}
+.room-pending-count {
+  padding: 2px 6px;
+  background: #bc684d;
+  color: #fff;
+  border-radius: 20px;
+  font-size: 10px;
+}
+.roomie-panel {
+  background: #fffdf9;
+  border: 1px solid #e5d9d0;
+  border-radius: 24px;
+  padding: 25px;
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+.roomie-panel .roomie-heading {
+  gap: 11px;
+  margin: 0;
+}
+.roomie-panel .roomie-heading h2 {
+  font-size: 18px;
+  color: #4d3f4a;
+  margin: 0 0 4px;
+}
+.roomie-panel .roomie-heading p {
+  font-size: 12px;
+  color: #83757e;
+  margin: 0;
+}
+.roomie-panel .roomie-heading .roomie-status {
+  font-size: 9px;
+  background: #f0e9df;
+  padding: 4px 8px;
+  border-radius: 20px;
+}
+.roomie-panel .roomie-input {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.roomie-panel textarea {
+  min-height: 112px;
+  background: #f8f4ed;
+  border: 1px solid #e7dbd0;
+  border-radius: 15px;
+  font-size: 13px;
+  padding: 14px;
+  resize: vertical;
+  line-height: 1.65;
+}
+.roomie-panel .roomie-input .button {
+  width: 100%;
+}
+.roomie-panel .roomie-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+}
+.roomie-panel .roomie-suggestions > button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #e5d9cf;
+  border-radius: 20px;
+  background: #faf7f1;
+  color: #8e6c5e;
+  padding: 7px 10px;
+  font-size: 11px;
+}
+.roomie-panel .roomie-footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-size: 10px;
+  color: #8b7e82;
+  line-height: 1.6;
+  margin-top: auto;
+}
+.roomie-panel .roomie-footnote svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.room-page-simple .room-editor {
+  margin: 0 0 25px;
+}
+.room-tool-shortcuts {
+  margin-top: 20px;
+}
+.room-tool-shortcut {
+  border-radius: 18px;
+}
+.room-page-simple .room-stage-heading {
+  padding: 20px 22px 0;
+}
+@media (max-width: 1100px) {
+  .room-page-simple .room-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .roomie-panel .roomie-input {
+    flex-direction: row;
+    align-items: stretch;
+  }
+  .roomie-panel .roomie-input textarea {
+    flex: 1;
+    min-height: 80px;
+  }
+  .roomie-panel .roomie-input .button {
+    width: auto;
+    align-self: center;
+  }
+}
+@media (max-width: 760px) {
+  .room-page-simple .room-page-heading {
+    display: block;
+  }
+  .room-top-actions {
+    margin-top: 17px;
+    flex-wrap: wrap;
+  }
+  .room-page-simple .room-workspace {
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+  .room-page-simple .room-illustration {
+    min-height: 270px;
+    height: 300px;
+  }
+  .room-page-simple .room-stage-heading {
+    padding: 16px 16px 0;
+  }
+  .room-page-simple .room-stage-heading > div {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .room-page-simple .room-stage-theme {
+    font-size: 9px;
+  }
+  .room-page-simple .room-stage-footer {
+    padding: 12px 14px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .room-page-simple .room-stage-footer .row {
+    gap: 10px;
+  }
+  .room-avatar-link,
+  .room-scene-shortcut {
+    font-size: 11px;
+  }
+  .roomie-panel {
+    padding: 21px;
+    gap: 14px;
+  }
+  .roomie-panel .roomie-input {
+    flex-direction: column;
+  }
+  .roomie-panel .roomie-input textarea {
+    min-height: 100px;
+    font-size: 16px;
+  }
+  .roomie-panel .roomie-input .button {
+    width: 100%;
+  }
+  .room-tool-shortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .room-tool-shortcut {
+    min-height: 110px;
+  }
+}
+
+.roomie-panel .roomie-input {
+  margin: 0;
+  border: 0;
+  background: transparent;
+}
+.roomie-panel .roomie-input > label {
+  font-size: 12px;
+  color: #7c6b72;
+}
